@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="QuickCrave brings your favorite local restaurant meals to your door, fast."
+    />
+    <meta name="theme-color" content="#fffaf4" />
+    <title>QuickCrave — Local flavor, delivered fast</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="navigation" aria-label="Main navigation">
+        <a class="brand" href="#home" aria-label="QuickCrave home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 40 40" fill="none">
+              <path
+                d="M21.5 4.5c1.8 7.1-3.1 8.3-3.1 13.1 0 2.2 1.1 3.6 2.8 4.5-.2-3.1 1.5-5.3 4.7-7.5 3.5 3.4 5.4 7.1 5.4 11.1 0 6-4.8 10-11.2 10S8.9 31.7 8.9 25.8c0-4.9 3.1-8.5 7.8-12.1-.7 5.2 1.7 6.7 3.5 7.1-1.6-5.6 4.1-8.8 1.3-16.3Z"
+                fill="currentColor"
+              />
+              <path
+                d="M20.1 29.7c1.8-2.1 1.8-4 1.6-5.3 2.8 1.8 4.1 3.8 4.1 6 0 2.6-2 4.3-4.7 4.3s-4.7-1.7-4.7-4.1c0-1.5.8-2.8 2.2-4 .1 1.5.5 2.4 1.5 3.1Z"
+                fill="#FFF9F2"
+              />
+            </svg>
+          </span>
+          <span class="brand-name">Quick<span>Crave</span></span>
+        </a>
+
+        <button
+          class="menu-toggle"
+          type="button"
+          aria-label="Open navigation menu"
+          aria-expanded="false"
+          aria-controls="navigation-menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+        <div class="navigation-menu" id="navigation-menu">
+          <ul class="navigation-links">
+            <li><a class="navigation-link is-active" href="#home">Home</a></li>
+            <li><a class="navigation-link" href="#menu">Explore menu</a></li>
+            <li><a class="navigation-link favorites-navigation-link" href="#favorites">Favorites <span id="favorites-count" aria-live="polite">0</span></a></li>
+            <li><a class="navigation-link" href="#how-it-works">How it works</a></li>
+            <li><a class="navigation-link" href="#about">Our story</a></li>
+          </ul>
+          <button
+            class="order-button cart-open-button"
+            id="cart-open"
+            type="button"
+            aria-haspopup="dialog"
+            aria-controls="cart-dialog"
+          >
+            Your cart <span class="cart-count" id="cart-count" aria-live="polite">0</span>
+          </button>
+        </div>
+      </nav>
+    </header>
+
+    <main id="home">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-content">
+          <p class="hero-eyebrow">
+            <span class="eyebrow-dot" aria-hidden="true"></span>
+            Your neighborhood, on a plate
+          </p>
+          <h1 id="hero-title">
+            Big flavor.<br />
+            <span>Zero</span> waiting.
+          </h1>
+          <p class="hero-description">
+            The good stuff from your favorite local spots, brought straight to
+            your door while it’s still delicious.
+          </p>
+          <div class="hero-actions">
+            <a class="hero-primary-button" href="#menu">
+              Find your next favorite
+              <span aria-hidden="true">→</span>
+            </a>
+            <a class="hero-secondary-link" href="#how-it-works">
+              How it works
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+          <div class="hero-proof">
+            <div class="proof-avatars" aria-hidden="true">
+              <span>J</span>
+              <span>M</span>
+              <span>A</span>
+            </div>
+            <p><strong>Loved around the block</strong><br />4.9/5 from local foodies</p>
+            <span class="proof-star" aria-hidden="true">★</span>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="visual-wash" aria-hidden="true"></div>
+          <div class="visual-note note-top" aria-hidden="true">
+            <span class="note-icon">✦</span>
+            <span>Made fresh,<br /><strong>never boring</strong></span>
+          </div>
+          <div class="meal-art">
+            <img
+              class="hero-food-photo"
+              src="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&amp;fit=crop&amp;w=1200&amp;q=88"
+              alt="Freshly baked pizza topped with tomato, basil, and melted cheese"
+              fetchpriority="high"
+            />
+          </div>
+          <div class="visual-note note-bottom" aria-hidden="true">
+            <span class="delivery-icon">↗</span>
+            <span>At your door<br /><strong>in a few taps</strong></span>
+          </div>
+          <svg class="hero-chilli" viewBox="0 0 120 150" fill="none" aria-hidden="true">
+            <path d="M42 25c15 9 23 25 22 44-1 24-19 47-42 57-10 5-18 2-17-7 2-15 17-28 20-48 3-18-3-30 5-42 3-5 7-7 12-4Z" fill="#E95C32" />
+            <path d="M42 29c-4-10-2-19 5-25 3 8 8 13 16 15-1 6-7 11-16 13" fill="#4D8A4F" />
+            <path d="M45 37c7 18 2 38-9 55" stroke="#FF9B68" stroke-linecap="round" stroke-width="5" opacity=".8" />
+          </svg>
+        </div>
+      </section>
+
+      <section class="explore-section" id="menu" aria-labelledby="menu-title">
+        <div class="explore-container">
+          <div class="explore-heading">
+            <div>
+              <p class="section-eyebrow">Good food, great mood</p>
+              <h2 id="menu-title">What are you <span>craving?</span></h2>
+              <p class="section-description">
+                Local favorites, made fresh and ready to make your day.
+              </p>
+            </div>
+            <a class="explore-all-link" href="#menu">
+              Explore all dishes
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+
+          <div class="menu-filters" role="group" aria-label="Filter dishes by category">
+            <button class="menu-filter is-selected" type="button" data-filter="all" aria-pressed="true">
+              Everything
+            </button>
+            <button class="menu-filter" type="button" data-filter="bowls" aria-pressed="false">
+              Feel-good bowls
+            </button>
+            <button class="menu-filter" type="button" data-filter="street-food" aria-pressed="false">
+              Street food
+            </button>
+            <button class="menu-filter" type="button" data-filter="burgers" aria-pressed="false">
+              Burgers
+            </button>
+            <button class="menu-filter" type="button" data-filter="comfort-food" aria-pressed="false">
+              Pizza &amp; comfort food
+            </button>
+          </div>
+          <p class="menu-disclaimer">Sample dishes, restaurant names, ratings, and prices for this demo.</p>
+
+          <div class="dish-grid" id="dish-grid" aria-live="polite">
+            <article class="dish-card" data-category="bowls">
+              <a class="dish-image" href="#menu" aria-label="Explore the Spicy Miso Ramen">
+                <img
+                  src="https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=85"
+                  alt="A bowl of ramen topped with egg, greens, and sliced pork"
+                  loading="lazy"
+                />
+                <span class="dish-badge">Bestseller</span>
+              </a>
+              <button class="dish-favorite" type="button" data-favorite-toggle data-id="spicy-miso-ramen" aria-label="Add Spicy Miso Ramen to favorites" aria-pressed="false">♡</button>
+              <div class="dish-details">
+                <div class="dish-title-row">
+                  <h3>Spicy Miso Ramen</h3>
+                  <span class="dish-rating"><span aria-hidden="true">★</span> 4.9</span>
+                </div>
+                <p class="dish-restaurant">Nori House <span aria-hidden="true">·</span> Japanese</p>
+                <div class="dish-meta">
+                  <span>25–30 min</span>
+                  <span class="dish-price">$14.50</span>
+                </div>
+                <button
+                  class="dish-add-button"
+                  type="button"
+                  data-add-to-cart
+                  data-id="spicy-miso-ramen"
+                  data-name="Spicy Miso Ramen"
+                  data-restaurant="Nori House"
+                  data-price="14.50"
+                >
+                  Add to cart <span aria-hidden="true">+</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="dish-card" data-category="street-food">
+              <a class="dish-image" href="#menu" aria-label="Explore the Baja Fish Tacos">
+                <img
+                  src="https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?auto=format&fit=crop&w=800&q=85"
+                  alt="Fresh tacos with colorful toppings and lime"
+                  loading="lazy"
+                />
+                <span class="dish-badge dish-badge-green">Local fave</span>
+              </a>
+              <button class="dish-favorite" type="button" data-favorite-toggle data-id="baja-fish-tacos" aria-label="Add Baja Fish Tacos to favorites" aria-pressed="false">♡</button>
+              <div class="dish-details">
+                <div class="dish-title-row">
+                  <h3>Baja Fish Tacos</h3>
+                  <span class="dish-rating"><span aria-hidden="true">★</span> 4.8</span>
+                </div>
+                <p class="dish-restaurant">Taco Loco <span aria-hidden="true">·</span> Mexican</p>
+                <div class="dish-meta">
+                  <span>20–25 min</span>
+                  <span class="dish-price">$12.00</span>
+                </div>
+                <button
+                  class="dish-add-button"
+                  type="button"
+                  data-add-to-cart
+                  data-id="baja-fish-tacos"
+                  data-name="Baja Fish Tacos"
+                  data-restaurant="Taco Loco"
+                  data-price="12.00"
+                >
+                  Add to cart <span aria-hidden="true">+</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="dish-card" data-category="burgers">
+              <a class="dish-image" href="#menu" aria-label="Explore the Double Smash Burger">
+                <img
+                  src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=85"
+                  alt="Double cheeseburger with lettuce, tomato, and toasted bun"
+                  loading="lazy"
+                />
+                <span class="dish-badge dish-badge-dark">Fan favorite</span>
+              </a>
+              <button class="dish-favorite" type="button" data-favorite-toggle data-id="double-smash-burger" aria-label="Add Double Smash Burger to favorites" aria-pressed="false">♡</button>
+              <div class="dish-details">
+                <div class="dish-title-row">
+                  <h3>Double Smash Burger</h3>
+                  <span class="dish-rating"><span aria-hidden="true">★</span> 4.9</span>
+                </div>
+                <p class="dish-restaurant">Goodside Grill <span aria-hidden="true">·</span> American</p>
+                <div class="dish-meta">
+                  <span>20–25 min</span>
+                  <span class="dish-price">$15.00</span>
+                </div>
+                <button
+                  class="dish-add-button"
+                  type="button"
+                  data-add-to-cart
+                  data-id="double-smash-burger"
+                  data-name="Double Smash Burger"
+                  data-restaurant="Goodside Grill"
+                  data-price="15.00"
+                >
+                  Add to cart <span aria-hidden="true">+</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="dish-card" data-category="bowls">
+              <a class="dish-image" href="#menu" aria-label="Explore the Green Goddess Bowl">
+                <img
+                  src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=85"
+                  alt="Fresh salad bowl with avocado, vegetables, and greens"
+                  loading="lazy"
+                />
+                <span class="dish-badge dish-badge-green">Fresh pick</span>
+              </a>
+              <button class="dish-favorite" type="button" data-favorite-toggle data-id="green-goddess-bowl" aria-label="Add Green Goddess Bowl to favorites" aria-pressed="false">♡</button>
+              <div class="dish-details">
+                <div class="dish-title-row">
+                  <h3>Green Goddess Bowl</h3>
+                  <span class="dish-rating"><span aria-hidden="true">★</span> 4.7</span>
+                </div>
+                <p class="dish-restaurant">Little Leaf <span aria-hidden="true">·</span> Healthy</p>
+                <div class="dish-meta">
+                  <span>15–20 min</span>
+                  <span class="dish-price">$11.50</span>
+                </div>
+                <button
+                  class="dish-add-button"
+                  type="button"
+                  data-add-to-cart
+                  data-id="green-goddess-bowl"
+                  data-name="Green Goddess Bowl"
+                  data-restaurant="Little Leaf"
+                  data-price="11.50"
+                >
+                  Add to cart <span aria-hidden="true">+</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="dish-card" data-category="bowls">
+              <a class="dish-image" href="#menu" aria-label="Explore the Salmon Poke Bowl">
+                <img
+                  src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=85"
+                  alt="A colorful bowl with fresh vegetables, grains, and greens"
+                  loading="lazy"
+                />
+                <span class="dish-badge dish-badge-green">Fresh pick</span>
+              </a>
+              <button class="dish-favorite" type="button" data-favorite-toggle data-id="rainbow-crunch-bowl" aria-label="Add Rainbow Crunch Bowl to favorites" aria-pressed="false">♡</button>
+              <div class="dish-details">
+                <div class="dish-title-row">
+                  <h3>Rainbow Crunch Bowl</h3>
+                  <span class="dish-rating"><span aria-hidden="true">★</span> 4.8</span>
+                </div>
+                <p class="dish-restaurant">Pacific Bowl <span aria-hidden="true">·</span> Hawaiian</p>
+                <div class="dish-meta">
+                  <span>20–25 min</span>
+                  <span class="dish-price">$16.00</span>
+                </div>
+                <button
+                  class="dish-add-button"
+                  type="button"
+                  data-add-to-cart
+                  data-id="rainbow-crunch-bowl"
+                  data-name="Rainbow Crunch Bowl"
+                  data-restaurant="Pacific Bowl"
+                  data-price="16.00"
+                >
+                  Add to cart <span aria-hidden="true">+</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="dish-card" data-category="bowls">
+              <a class="dish-image" href="#menu" aria-label="Explore the Roasted Veggie Bowl">
+                <img
+                  src="https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?auto=format&fit=crop&w=800&q=85"
+                  alt="A fresh meal with vegetables and colorful toppings"
+                  loading="lazy"
+                />
+                <span class="dish-badge">A little kick</span>
+              </a>
+              <button class="dish-favorite" type="button" data-favorite-toggle data-id="roasted-veggie-bowl" aria-label="Add Roasted Veggie Bowl to favorites" aria-pressed="false">♡</button>
+              <div class="dish-details">
+                <div class="dish-title-row">
+                  <h3>Roasted Veggie Bowl</h3>
+                  <span class="dish-rating"><span aria-hidden="true">★</span> 4.7</span>
+                </div>
+                <p class="dish-restaurant">Little Leaf <span aria-hidden="true">·</span> Healthy</p>
+                <div class="dish-meta">
+                  <span>20–25 min</span>
+                  <span class="dish-price">$12.50</span>
+                </div>
+                <button
+                  class="dish-add-button"
+                  type="button"
+                  data-add-to-cart
+                  data-id="roasted-veggie-bowl"
+                  data-name="Roasted Veggie Bowl"
+                  data-restaurant="Little Leaf"
+                  data-price="12.50"
+                >
+                  Add to cart <span aria-hidden="true">+</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="dish-card" data-category="burgers">
+              <a class="dish-image" href="#menu" aria-label="Explore the Crispy Chicken Sandwich">
+                <img
+                  src="https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=800&q=85"
+                  alt="A toasted sandwich filled with fresh ingredients"
+                  loading="lazy"
+                />
+                <span class="dish-badge dish-badge-dark">Crunchy favorite</span>
+              </a>
+              <button class="dish-favorite" type="button" data-favorite-toggle data-id="crispy-chicken-sandwich" aria-label="Add Crispy Chicken Sandwich to favorites" aria-pressed="false">♡</button>
+              <div class="dish-details">
+                <div class="dish-title-row">
+                  <h3>Crispy Chicken Sandwich</h3>
+                  <span class="dish-rating"><span aria-hidden="true">★</span> 4.8</span>
+                </div>
+                <p class="dish-restaurant">Goodside Grill <span aria-hidden="true">·</span> American</p>
+                <div class="dish-meta">
+                  <span>20–25 min</span>
+                  <span class="dish-price">$13.50</span>
+                </div>
+                <button
+                  class="dish-add-button"
+                  type="button"
+                  data-add-to-cart
+                  data-id="crispy-chicken-sandwich"
+                  data-name="Crispy Chicken Sandwich"
+                  data-restaurant="Goodside Grill"
+                  data-price="13.50"
+                >
+                  Add to cart <span aria-hidden="true">+</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="dish-card" data-category="comfort-food">
+              <a class="dish-image" href="#menu" aria-label="Explore the Margherita Pizza">
+                <img
+                  src="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=85"
+                  alt="A freshly baked pizza topped with tomato and basil"
+                  loading="lazy"
+                />
+                <span class="dish-badge">Oven fresh</span>
+              </a>
+              <button class="dish-favorite" type="button" data-favorite-toggle data-id="margherita-pizza" aria-label="Add Margherita Pizza to favorites" aria-pressed="false">♡</button>
+              <div class="dish-details">
+                <div class="dish-title-row">
+                  <h3>Margherita Pizza</h3>
+                  <span class="dish-rating"><span aria-hidden="true">★</span> 4.9</span>
+                </div>
+                <p class="dish-restaurant">Nonna's Oven <span aria-hidden="true">·</span> Italian</p>
+                <div class="dish-meta">
+                  <span>25–30 min</span>
+                  <span class="dish-price">$14.00</span>
+                </div>
+                <button
+                  class="dish-add-button"
+                  type="button"
+                  data-add-to-cart
+                  data-id="margherita-pizza"
+                  data-name="Margherita Pizza"
+                  data-restaurant="Nonna's Oven"
+                  data-price="14.00"
+                >
+                  Add to cart <span aria-hidden="true">+</span>
+                </button>
+              </div>
+            </article>
+          </div>
+
+          <section class="favorites-section" id="favorites" aria-labelledby="favorites-title">
+            <div class="favorites-heading">
+              <div>
+                <p class="section-eyebrow">Keep your cravings close</p>
+                <h2 id="favorites-title">Your <span>favorites</span></h2>
+                <p class="section-description">The dishes you love, all in one place.</p>
+              </div>
+              <a class="explore-all-link" href="#menu">Browse the menu <span aria-hidden="true">↗</span></a>
+            </div>
+            <p class="favorites-empty" id="favorites-empty" role="status">No favorites yet. Tap the heart on any dish to save it here.</p>
+            <div class="dish-grid favorites-grid" id="favorites-grid" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="ordering-section" id="how-it-works" aria-labelledby="ordering-title">
+        <div class="ordering-container">
+          <div class="ordering-intro">
+            <p class="section-eyebrow">Good food is just around the corner</p>
+            <h2 id="ordering-title">Your next great meal is <span>three taps away.</span></h2>
+            <p class="section-description">Skip the guesswork. We make getting something delicious feel effortless.</p>
+            <a class="hero-primary-button" href="#menu">Start exploring <span aria-hidden="true">→</span></a>
+          </div>
+          <ol class="ordering-steps">
+            <li>
+              <span class="step-number">01</span>
+              <div><h3>Find your craving</h3><p>Browse local favorites and pick the meal that sounds just right.</p></div>
+            </li>
+            <li>
+              <span class="step-number">02</span>
+              <div><h3>Build your cart</h3><p>Add dishes, check your order, and enter a delivery address.</p></div>
+            </li>
+            <li>
+              <span class="step-number">03</span>
+              <div><h3>Let the good times roll</h3><p>Your neighborhood restaurant gets cooking. We’ll bring it to you.</p></div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="story-section" id="about" aria-labelledby="story-title">
+        <div class="story-container">
+          <div class="story-visual">
+            <div class="story-photo">
+              <img
+                src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1000&q=85"
+                alt="A freshly prepared meal made with colorful local ingredients"
+                loading="lazy"
+              />
+              <span class="story-photo-label"><span aria-hidden="true">✦</span> A taste of the neighborhood</span>
+            </div>
+            <div class="story-note">
+              <span class="story-note-icon" aria-hidden="true">
+                <svg viewBox="0 0 32 32" fill="none">
+                  <path d="M5 14.5 16 5l11 9.5V27H5V14.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                  <path d="M12 27v-8h8v8M10 14h.01M16 14h.01M22 14h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+              </span>
+              <span><strong>Good food.</strong><br />Good neighbors.</span>
+            </div>
+            <span class="story-sparkle sparkle-one" aria-hidden="true">✳</span>
+            <span class="story-sparkle sparkle-two" aria-hidden="true">✦</span>
+          </div>
+
+          <div class="story-copy">
+            <p class="section-eyebrow">A little about us</p>
+            <h2 id="story-title">Big love for the <span>little places.</span></h2>
+            <p class="story-lead">
+              The best bites aren’t always from the biggest kitchens. They’re
+              from the neighborhood spots that remember your order, try
+              something new, and put a little heart into every plate.
+            </p>
+            <p class="story-description">
+              QuickCrave is built around a simple idea: discovering those
+              places should feel just as good as eating from them. We bring
+              local menus together in one easy place, so finding your next
+              favorite feels effortless—and choosing local feels natural.
+            </p>
+            <a class="story-link" href="#menu">
+              Get to know your local menu
+              <span aria-hidden="true">→</span>
+            </a>
+            <div class="story-values">
+              <div>
+                <span class="value-mark" aria-hidden="true">01</span>
+                <strong>Local at heart</strong>
+                <p>Made for neighborhood flavor.</p>
+              </div>
+              <div>
+                <span class="value-mark" aria-hidden="true">02</span>
+                <strong>Always welcoming</strong>
+                <p>Something for every craving.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="partner-section" id="partners" aria-labelledby="partner-title">
+        <div class="partner-container">
+          <div class="partner-copy">
+            <p class="section-eyebrow">For the people behind the plate</p>
+            <h2 id="partner-title">Your food deserves a <span>bigger table.</span></h2>
+            <p>We help neighborhood restaurants meet more hungry locals. Tell us a little about your spot and our partnerships team will be in touch.</p>
+            <ul class="partner-benefits">
+              <li><span aria-hidden="true">✓</span> Reach new nearby customers</li>
+              <li><span aria-hidden="true">✓</span> Keep your restaurant's personality front and center</li>
+              <li><span aria-hidden="true">✓</span> Grow at a pace that works for you</li>
+            </ul>
+            <p class="partner-disclaimer">Demo only: this form does not send your details to a real restaurant platform.</p>
+          </div>
+          <form class="partner-form" id="partner-form">
+            <h3>Let's get to know your restaurant</h3>
+            <label for="partner-name">Restaurant name</label>
+            <input
+              id="partner-name"
+              name="restaurant"
+              type="text"
+              autocomplete="organization"
+              placeholder="e.g. The Corner Table"
+              required
+            />
+            <label for="partner-email">Your work email</label>
+            <input
+              id="partner-email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              placeholder="you@restaurant.com"
+              required
+            />
+            <label for="partner-neighborhood">Neighborhood or city</label>
+            <input
+              id="partner-neighborhood"
+              name="neighborhood"
+              type="text"
+              autocomplete="address-level2"
+              placeholder="Where can we find you?"
+              required
+            />
+            <button class="hero-primary-button" type="submit">
+              Pitch your restaurant <span aria-hidden="true">→</span>
+            </button>
+            <p class="form-status" id="partner-status" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-main">
+        <div class="footer-brand">
+          <a class="brand footer-logo" href="#home" aria-label="QuickCrave home">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 40 40" fill="none">
+                <path
+                  d="M21.5 4.5c1.8 7.1-3.1 8.3-3.1 13.1 0 2.2 1.1 3.6 2.8 4.5-.2-3.1 1.5-5.3 4.7-7.5 3.5 3.4 5.4 7.1 5.4 11.1 0 6-4.8 10-11.2 10S8.9 31.7 8.9 25.8c0-4.9 3.1-8.5 7.8-12.1-.7 5.2 1.7 6.7 3.5 7.1-1.6-5.6 4.1-8.8 1.3-16.3Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M20.1 29.7c1.8-2.1 1.8-4 1.6-5.3 2.8 1.8 4.1 3.8 4.1 6 0 2.6-2 4.3-4.7 4.3s-4.7-1.7-4.7-4.1c0-1.5.8-2.8 2.2-4 .1 1.5.5 2.4 1.5 3.1Z"
+                  fill="#FFF9F2"
+                />
+              </svg>
+            </span>
+            <span class="brand-name">Quick<span>Crave</span></span>
+          </a>
+          <p>Good food from good neighbors.<br />A little local flavor goes a long way.</p>
+        </div>
+
+        <nav class="footer-links" aria-label="Footer navigation">
+          <div class="footer-link-group">
+            <h2>Explore</h2>
+            <a href="#menu">Browse the menu</a>
+            <a href="#how-it-works">How it works</a>
+          </div>
+          <div class="footer-link-group">
+            <h2>Be part of it</h2>
+            <a href="#partners">Restaurant partners</a>
+            <a href="#partner-form">Pitch your restaurant</a>
+          </div>
+        </nav>
+
+        <a class="footer-order-link" href="#menu">
+          Hungry yet?
+          <span>Find something delicious <span aria-hidden="true">↗</span></span>
+        </a>
+      </div>
+
+      <div class="footer-bottom">
+        <p>© <span id="current-year">2026</span> QuickCrave. Made with a little extra flavor.</p>
+        <a href="#home">Back to top <span aria-hidden="true">↑</span></a>
+      </div>
+    </footer>
+
+    <dialog
+      class="cart-dialog"
+      id="cart-dialog"
+      aria-labelledby="cart-title"
+    >
+      <div class="cart-view" id="cart-view">
+        <div class="dialog-heading">
+          <div><p class="section-eyebrow">QuickCrave checkout demo</p><h2 id="cart-title">Your cart <span id="cart-item-label">(0 items)</span></h2></div>
+          <button
+            class="dialog-close"
+            type="button"
+            data-close-cart
+            aria-label="Close cart"
+          >
+            ×
+          </button>
+        </div>
+        <div class="cart-items" id="cart-items" aria-live="polite"></div>
+        <p class="cart-empty" id="cart-empty">Your cart is hungry. Add a dish to get started.</p>
+        <div class="cart-totals" id="cart-totals" hidden>
+          <p><span>Subtotal</span><strong id="cart-subtotal">$0.00</strong></p>
+          <p><span>Delivery</span><strong id="cart-delivery">$0.00</strong></p>
+          <p><span>Estimated tax</span><strong id="cart-tax">$0.00</strong></p>
+          <p class="cart-grand-total"><span>Total</span><strong id="cart-total">$0.00</strong></p>
+          <p class="demo-note">Demo checkout only — no payment will be taken.</p>
+          <button
+            class="hero-primary-button checkout-start"
+            id="checkout-start"
+            type="button"
+          >
+            Continue to checkout <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </div>
+      <form class="checkout-form" id="checkout-form" hidden>
+        <div class="dialog-heading">
+          <div><p class="section-eyebrow">Almost there</p><h2>Delivery details</h2></div>
+          <button
+            class="dialog-close"
+            type="button"
+            data-close-cart
+            aria-label="Close checkout"
+          >
+            ×
+          </button>
+        </div>
+        <p class="checkout-total">Demo order total: <strong id="checkout-total">$0.00</strong></p>
+        <label for="customer-name">Your name</label>
+        <input
+          id="customer-name"
+          name="name"
+          type="text"
+          autocomplete="name"
+          placeholder="Name for the order"
+          required
+        />
+        <label for="customer-email">Email</label>
+        <input
+          id="customer-email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+          required
+        />
+        <label for="customer-address">Delivery address</label>
+        <textarea
+          id="customer-address"
+          name="address"
+          autocomplete="street-address"
+          rows="3"
+          placeholder="Street address and apartment number"
+          required
+        ></textarea>
+        <p class="demo-note">This is a mock checkout. No payment details are requested or collected.</p>
+        <div class="checkout-actions">
+          <button class="text-button" id="back-to-cart" type="button">Back to cart</button>
+          <button class="hero-primary-button" type="submit">Place demo order</button>
+        </div>
+      </form>
+      <div class="checkout-confirmation" id="checkout-confirmation" hidden>
+        <span class="confirmation-mark" aria-hidden="true">✓</span>
+        <p class="section-eyebrow">Order received (demo)</p>
+        <h2 id="confirmation-title">You're all set!</h2>
+        <p id="confirmation-message">This was a demo checkout. No restaurant was notified and no payment was taken.</p>
+        <button class="hero-primary-button" id="finish-checkout" type="button">Back to the menu</button>
+      </div>
+    </dialog>
+
+    <div class="toast-message" id="cart-toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
