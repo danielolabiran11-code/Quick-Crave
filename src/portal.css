@@ -1136,6 +1136,115 @@
   min-height: 200px;
 }
 
+.admin-review-card {
+  margin-top: 20px;
+}
+
+.admin-filter select {
+  min-height: 39px;
+  padding: 0 30px 0 11px;
+  border: 1px solid #ece3d9;
+  border-radius: 9px;
+  background: #fff;
+  color: #65584d;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.admin-restaurant-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-restaurant-list > li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 19px 0;
+  border-top: 1px solid #f0e9e1;
+}
+
+.admin-restaurant-details {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-restaurant-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.admin-restaurant-title h3 {
+  margin: 0;
+  color: #41382f;
+  font-size: 0.98rem;
+}
+
+.admin-restaurant-details p,
+.admin-restaurant-details small {
+  margin: 0;
+  color: #81776d;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.admin-restaurant-details small {
+  color: #9a8e83;
+  font-size: 0.71rem;
+}
+
+.admin-restaurant-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-restaurant-actions .hero-primary-button,
+.admin-restaurant-actions .secondary-button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #ece3d9;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-restaurant-actions .hero-primary-button {
+  border: 0;
+  color: white;
+}
+
+.status-pill.status-approved {
+  background: #e5f3e5;
+  color: #3d7541;
+}
+
+.status-pill.status-rejected,
+.status-pill.status-suspended {
+  background: #fbe8e4;
+  color: #9d4537;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
 .menu-editor-form {
   display: grid;
   align-items: end;
@@ -1201,6 +1310,16 @@
   border-top: 1px solid #f0e9e1;
   color: #554a40;
   font-size: 0.85rem;
+}
+
+@media (max-width: 700px) {
+  .admin-restaurant-list > li {
+    display: grid;
+  }
+
+  .admin-restaurant-actions {
+    justify-content: flex-start;
+  }
 }
 
 .profile-placeholder .secondary-button {

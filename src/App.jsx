@@ -3,15 +3,17 @@ import { Link, Route, Routes } from "react-router-dom";
 import { isSupabaseConfigured, supabase } from "./lib/supabase.js";
 import {
   AccountChoicePage,
+  AdminDashboardPage,
   AuthPage,
   CustomerDashboardPage,
   RestaurantDashboardPage,
 } from "./PortalPages.jsx";
 
 const favoriteStorageKey = "quickcrave:favorites";
-const currency = new Intl.NumberFormat("en-US", {
+const currency = new Intl.NumberFormat("en-NG", {
   style: "currency",
-  currency: "USD",
+  currency: "NGN",
+  maximumFractionDigits: 2,
 });
 
 function getSavedFavorites() {
@@ -517,6 +519,8 @@ function App() {
       <Route path="/customer/signup" element={<AuthPage audience="customer" mode="signup" />} />
       <Route path="/restaurant/login" element={<AuthPage audience="restaurant" mode="login" />} />
       <Route path="/restaurant/signup" element={<AuthPage audience="restaurant" mode="signup" />} />
+      <Route path="/admin/login" element={<AuthPage audience="admin" mode="login" />} />
+      <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
       <Route path="/customer/dashboard/*" element={<CustomerDashboardPage />} />
       <Route path="/restaurant/dashboard/*" element={<RestaurantDashboardPage />} />
       <Route path="*" element={<AccountChoicePage />} />

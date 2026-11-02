@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./lib/AuthContext.jsx";
 
+const priceFormatter = new Intl.NumberFormat("en-NG", {
+  style: "currency",
+  currency: "NGN",
+  maximumFractionDigits: 2,
+});
+
 function PortalBrand() {
   return (
     <Link className="portal-brand" to="/" aria-label="QuickCrave home">
@@ -43,6 +49,8 @@ function PortalFrame({ children, audience = "customer" }) {
         ["/restaurant/dashboard/menu", "Menu"],
         ["/restaurant/dashboard/settings", "Settings"],
       ]
+    : audience === "admin"
+      ? [["/admin/dashboard", "Restaurant review"]]
     : [
         ["/customer/dashboard", "Discover"],
         ["/customer/dashboard/orders", "Your orders"],
@@ -55,7 +63,7 @@ function PortalFrame({ children, audience = "customer" }) {
       <header className="portal-topbar">
         <PortalBrand />
         <div className="portal-topbar-right">
-          <span className="portal-account-label">{isRestaurant ? "Restaurant workspace" : "Customer account"}</span>
+          <span className="portal-account-label">{isRestaurant ? "Restaurant workspace" : audience === "admin" ? "Administrator" : "Customer account"}</span>
           <span className="portal-user-email">{user?.email}</span>
           <button
             className="portal-signout"
@@ -75,8 +83,8 @@ function PortalFrame({ children, audience = "customer" }) {
           <div className="portal-sidebar-heading">
             <span className="portal-avatar">{isRestaurant ? "R" : "Q"}</span>
             <div>
-              <strong>{isRestaurant ? "Restaurant account" : "Welcome to QuickCrave"}</strong>
-              <span>{isRestaurant ? "Manage your business" : "Find your next favorite"}</span>
+              <strong>{isRestaurant ? "Restaurant account" : audience === "admin" ? "QuickCrave admin" : "Welcome to QuickCrave"}</strong>
+              <span>{isRestaurant ? "Manage your business" : audience === "admin" ? "Manage the marketplace" : "Find your next favorite"}</span>
             </div>
           </div>
           <nav aria-label={`${audience} dashboard`}>
@@ -108,6 +116,7 @@ function PortalFrame({ children, audience = "customer" }) {
 
 function navIcon(label) {
   const icons = {
+    "Restaurant review": "✓",
     Overview: "⌂",
     Orders: "▤",
     Menu: "☷",
@@ -150,6 +159,12 @@ export function ProtectedRoute({ audience, children }) {
               .eq("user_id", user.id)
               .limit(1)
               .maybeSingle()
+          : audience === "admin"
+            ? supabase
+                .from("admin_users")
+                .select("user_id")
+                .eq("user_id", user.id)
+                .maybeSingle()
           : supabase
               .from("profiles")
               .select("account_type")
@@ -163,7 +178,9 @@ export function ProtectedRoute({ audience, children }) {
           !error &&
           (audience === "restaurant"
             ? Boolean(data?.restaurant_id)
-            : data?.account_type === "customer"),
+            : audience === "admin"
+              ? Boolean(data?.user_id)
+              : data?.account_type === "customer"),
         error: error?.message ?? "",
       });
     }
@@ -206,6 +223,7 @@ export function ProtectedRoute({ audience, children }) {
 
 export function AuthPage({ audience, mode }) {
   const isRestaurant = audience === "restaurant";
+  const isAdmin = audience === "admin";
   const isSignup = mode === "signup";
   const { configured, supabase } = useAuth();
   const navigate = useNavigate();
@@ -225,6 +243,26 @@ export function AuthPage({ audience, mode }) {
 
     try {
       if (isSignup) {
+        const fullName = String(formData.get("name") ?? "").trim();
+        const phone = String(formData.get("phone") ?? "").trim();
+        if (!isRestaurant) {
+          const { error: signupError } = await supabase.functions.invoke("customer-signup", {
+            body: { email, password, fullName, phone },
+          });
+          if (signupError) {
+            let message = signupError.message;
+            if (signupError.context instanceof Response) {
+              const details = await signupError.context.json();
+              if (details && typeof details.error === "string") message = details.error;
+            }
+            throw new Error(message);
+          }
+          const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+          if (signInError) throw signInError;
+          navigate("/customer/dashboard", { replace: true });
+          return;
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -232,18 +270,17 @@ export function AuthPage({ audience, mode }) {
             emailRedirectTo: `${window.location.origin}/${audience}/login`,
             data: {
               account_type: audience,
-              full_name: String(formData.get("name") ?? "").trim(),
-              phone: String(formData.get("phone") ?? "").trim(),
-              restaurant_name: isRestaurant
-                ? String(formData.get("name") ?? "").trim()
-                : "",
+              full_name: fullName,
+              phone,
+              restaurant_name: fullName,
+              restaurant_location: String(formData.get("restaurant_location") ?? "").trim(),
             },
           },
         });
         if (error) throw error;
 
         if (data.session) {
-          navigate(`/${audience}/dashboard`, { replace: true });
+          navigate(isAdmin ? "/admin/dashboard" : `/${audience}/dashboard`, { replace: true });
         } else {
           setNotice("Check your email to confirm the account, then sign in to continue.");
         }
@@ -254,17 +291,30 @@ export function AuthPage({ audience, mode }) {
         });
         if (error) throw error;
 
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("account_type")
-          .eq("id", data.user.id)
-          .maybeSingle();
-        if (profileError) throw profileError;
-        if (profile?.account_type !== audience) {
-          await supabase.auth.signOut();
-          throw new Error(
-            `This is not a ${isRestaurant ? "restaurant" : "customer"} account. Choose the correct sign-in page.`,
-          );
+        if (isAdmin) {
+          const { data: adminMembership, error: adminError } = await supabase
+            .from("admin_users")
+            .select("user_id")
+            .eq("user_id", data.user.id)
+            .maybeSingle();
+          if (adminError) throw adminError;
+          if (!adminMembership) {
+            await supabase.auth.signOut();
+            throw new Error("This account does not have QuickCrave administrator access.");
+          }
+        } else {
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("account_type")
+            .eq("id", data.user.id)
+            .maybeSingle();
+          if (profileError) throw profileError;
+          if (profile?.account_type !== audience) {
+            await supabase.auth.signOut();
+            throw new Error(
+              `This is not a ${isRestaurant ? "restaurant" : "customer"} account. Choose the correct sign-in page.`,
+            );
+          }
         }
 
         if (isRestaurant) {
@@ -297,12 +347,14 @@ export function AuthPage({ audience, mode }) {
       </header>
       <div className="auth-layout">
         <section className="auth-story">
-          <span className="auth-eyebrow">{isRestaurant ? "FOR RESTAURANTS" : "FOR FOOD LOVERS"}</span>
-          <h1>{isRestaurant ? "Your kitchen’s next chapter starts here." : "Good food is closer than you think."}</h1>
+          <span className="auth-eyebrow">{isRestaurant ? "FOR RESTAURANTS" : isAdmin ? "QUICKCRAVE ADMIN" : "FOR FOOD LOVERS"}</span>
+          <h1>{isRestaurant ? "Your kitchen’s next chapter starts here." : isAdmin ? "Marketplace administration." : "Good food is closer than you think."}</h1>
           <p>
             {isRestaurant
               ? "Build your restaurant presence, keep your menu current, and stay close to every order."
-              : "Discover neighborhood kitchens, keep your favorites close, and make ordering feel easy."}
+              : isAdmin
+                ? "Review restaurant registrations and keep the QuickCrave marketplace trustworthy."
+                : "Discover neighborhood kitchens, keep your favorites close, and make ordering feel easy."}
           </p>
           <div className="auth-story-note">
             <span aria-hidden="true">✦</span>
@@ -315,11 +367,7 @@ export function AuthPage({ audience, mode }) {
             <h2 id="auth-title">
               {isSignup ? "Create your account" : "Sign in"}
             </h2>
-            <p>
-              {isRestaurant
-                ? "Restaurant account"
-                : "Customer account"}
-            </p>
+            <p>{isRestaurant ? "Restaurant account" : isAdmin ? "Administrator access" : "Customer account"}</p>
           </div>
           <form className="auth-form" onSubmit={handleSubmit}>
             {isSignup && (
@@ -341,6 +389,14 @@ export function AuthPage({ audience, mode }) {
                   name="phone"
                   type="tel"
                   autoComplete="tel"
+                  required
+                />
+                <label htmlFor="restaurant-location">Neighborhood or city</label>
+                <input
+                  id="restaurant-location"
+                  name="restaurant_location"
+                  autoComplete="address-level2"
+                  maxLength={120}
                   required
                 />
               </>
@@ -369,12 +425,14 @@ export function AuthPage({ audience, mode }) {
             {errorMessage && <p className="auth-error" role="alert">{errorMessage}</p>}
             {!configured && <p className="auth-availability">Account access isn’t configured yet. Add the Supabase environment variables to enable this form.</p>}
           </form>
-          <p className="auth-switch">
-            {isSignup ? "Already have an account?" : "New to QuickCrave?"}{" "}
-            <Link to={`/${audience}/${isSignup ? "login" : "signup"}`}>
-              {isSignup ? "Sign in" : "Create an account"}
-            </Link>
-          </p>
+          {!isAdmin && (
+            <p className="auth-switch">
+              {isSignup ? "Already have an account?" : "New to QuickCrave?"}{" "}
+              <Link to={`/${audience}/${isSignup ? "login" : "signup"}`}>
+                {isSignup ? "Sign in" : "Create an account"}
+              </Link>
+            </p>
+          )}
           {isRestaurant && (
             <p className="auth-switch customer-switch">
               Looking for a meal? <Link to="/customer/login">Customer sign in</Link>
@@ -604,7 +662,7 @@ function CustomerDashboard({ section = "discover" }) {
                         .map((item) => (
                           <li key={item.id}>
                             <span><strong>{item.name}</strong><small>{item.description || item.category}</small></span>
-                            <strong>${Number(item.price).toFixed(2)}</strong>
+                            <strong>{priceFormatter.format(Number(item.price))}</strong>
                           </li>
                         ))}
                     </ul>
@@ -1045,7 +1103,7 @@ function RestaurantDashboard({ section = "overview" }) {
                 {menuItems.map((item) => (
                   <li key={item.id}>
                     <span>{item.image_url && <img className="menu-item-thumbnail" src={item.image_url} alt="" />}<strong>{item.name}</strong><small>{item.category}{item.description ? ` · ${item.description}` : ""}</small></span>
-                    <strong>${Number(item.price).toFixed(2)}</strong>
+                    <strong>{priceFormatter.format(Number(item.price))}</strong>
                     <span className="menu-item-actions">
                       <button type="button" disabled={restaurantRole !== "owner"} onClick={() => updateMenuAvailability(item)}>{item.is_available ? "Available" : "Unavailable"}</button>
                       <button type="button" disabled={restaurantRole !== "owner"} onClick={() => beginEditMenuItem(item)}>Edit</button>
@@ -1095,6 +1153,178 @@ function MetricCard({ label, value, detail, icon }) {
   );
 }
 
+function AdminDashboard() {
+  const { supabase } = useAuth();
+  const [restaurants, setRestaurants] = useState([]);
+  const [filter, setFilter] = useState("pending");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [updatingId, setUpdatingId] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    async function loadRestaurants() {
+      setLoading(true);
+      setError("");
+      const { data, error: restaurantsError } = await supabase
+        .from("restaurants")
+        .select("id, name, location, opening_hours, status, created_at")
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      if (restaurantsError) {
+        setError(restaurantsError.message);
+        setLoading(false);
+        return;
+      }
+
+      const restaurantIds = (data ?? []).map((restaurant) => restaurant.id);
+      if (restaurantIds.length) {
+        const { data: contacts, error: contactsError } = await supabase
+          .from("restaurant_contacts")
+          .select("restaurant_id, contact_email, phone, whatsapp")
+          .in("restaurant_id", restaurantIds);
+        if (!active) return;
+        if (contactsError) {
+          setError(contactsError.message);
+          setLoading(false);
+          return;
+        }
+        const contactsByRestaurant = new Map(
+          (contacts ?? []).map((contact) => [contact.restaurant_id, contact]),
+        );
+        setRestaurants((data ?? []).map((restaurant) => ({
+          ...restaurant,
+          contacts: contactsByRestaurant.get(restaurant.id),
+        })));
+      } else {
+        setRestaurants([]);
+      }
+      setLoading(false);
+    }
+
+    loadRestaurants();
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  async function updateRestaurantStatus(restaurant, status) {
+    setUpdatingId(restaurant.id);
+    setError("");
+    setStatusMessage("");
+    const { data, error: updateError } = await supabase
+      .from("restaurants")
+      .update({ status })
+      .eq("id", restaurant.id)
+      .select("id, status")
+      .single();
+    if (updateError) {
+      setError(updateError.message);
+    } else {
+      setRestaurants((current) => current.map((item) =>
+        item.id === data.id ? { ...item, status: data.status } : item,
+      ));
+      setStatusMessage(`${restaurant.name} is now ${status}.`);
+    }
+    setUpdatingId("");
+  }
+
+  const visibleRestaurants = filter === "all"
+    ? restaurants
+    : restaurants.filter((restaurant) => restaurant.status === filter);
+  const pendingCount = restaurants.filter((restaurant) => restaurant.status === "pending").length;
+
+  return (
+    <PortalFrame audience="admin">
+      <DashboardHeader
+        eyebrow="MARKETPLACE ADMINISTRATION"
+        title="Restaurant review"
+        description="Review restaurant registrations and manage their marketplace approval."
+        action={<span className="status-pill">{pendingCount} pending</span>}
+      />
+      {error && <p className="auth-error" role="alert">{error}</p>}
+      {statusMessage && <p className="profile-status" role="status">{statusMessage}</p>}
+      <section className="portal-card admin-review-card">
+        <div className="card-title-row">
+          <div><h2>Restaurant applications</h2><p>Confirm the business details before making a restaurant public.</p></div>
+          <label className="admin-filter">
+            <span className="visually-hidden">Filter restaurants</span>
+            <select value={filter} onChange={(event) => setFilter(event.target.value)}>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="suspended">Suspended</option>
+              <option value="all">All restaurants</option>
+            </select>
+          </label>
+        </div>
+        {loading ? (
+          <p role="status">Loading restaurant applications…</p>
+        ) : visibleRestaurants.length === 0 ? (
+          <EmptyState
+            icon="✓"
+            title={filter === "pending" ? "No applications awaiting review" : "No restaurants in this list"}
+            text={filter === "pending" ? "New restaurant registrations will appear here." : "Choose another status filter to review restaurants."}
+          />
+        ) : (
+          <ul className="admin-restaurant-list">
+            {visibleRestaurants.map((restaurant) => (
+              <li key={restaurant.id}>
+                <div className="admin-restaurant-details">
+                  <div className="admin-restaurant-title">
+                    <h3>{restaurant.name}</h3>
+                    <span className={`status-pill status-${restaurant.status}`}>{restaurant.status}</span>
+                  </div>
+                  <p>{restaurant.location || "Location not provided"}{restaurant.opening_hours ? ` · ${restaurant.opening_hours}` : ""}</p>
+                  <p>
+                    {restaurant.contacts?.contact_email || "No contact email"}
+                    {restaurant.contacts?.phone ? ` · ${restaurant.contacts.phone}` : ""}
+                    {restaurant.contacts?.whatsapp ? ` · WhatsApp ${restaurant.contacts.whatsapp}` : ""}
+                  </p>
+                  <small>Submitted {new Date(restaurant.created_at).toLocaleDateString()}</small>
+                </div>
+                <div className="admin-restaurant-actions">
+                  {restaurant.status !== "approved" && (
+                    <button
+                      className="hero-primary-button"
+                      type="button"
+                      disabled={updatingId === restaurant.id}
+                      onClick={() => updateRestaurantStatus(restaurant, "approved")}
+                    >
+                      {updatingId === restaurant.id ? "Saving…" : "Approve"}
+                    </button>
+                  )}
+                  {restaurant.status === "pending" && (
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      disabled={updatingId === restaurant.id}
+                      onClick={() => updateRestaurantStatus(restaurant, "rejected")}
+                    >
+                      Reject
+                    </button>
+                  )}
+                  {restaurant.status === "approved" && (
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      disabled={updatingId === restaurant.id}
+                      onClick={() => updateRestaurantStatus(restaurant, "suspended")}
+                    >
+                      Suspend
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </PortalFrame>
+  );
+}
+
 function EmptyState({ icon, title, text }) {
   return (
     <section className="empty-state">
@@ -1121,6 +1351,14 @@ export function RestaurantDashboardPage() {
   return (
     <ProtectedRoute audience="restaurant">
       <RestaurantDashboard section={section === "dashboard" ? "overview" : section} />
+    </ProtectedRoute>
+  );
+}
+
+export function AdminDashboardPage() {
+  return (
+    <ProtectedRoute audience="admin">
+      <AdminDashboard />
     </ProtectedRoute>
   );
 }
