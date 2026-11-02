@@ -1572,16 +1572,6 @@ button:focus-visible {
   margin-top: 19px;
 }
 
-.cart-totals > p:not(.demo-note) {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
-  margin: 0;
-  padding: 8px 0;
-  color: #74695f;
-  font-size: 0.82rem;
-}
-
 .cart-totals > p strong {
   color: #40352c;
 }
@@ -1598,13 +1588,6 @@ button:focus-visible {
 .cart-totals .cart-grand-total strong {
   color: var(--color-orange-dark);
   font-size: 1.1rem;
-}
-
-.demo-note {
-  margin: 13px 0;
-  color: #8c8075;
-  font-size: 0.72rem;
-  line-height: 1.55;
 }
 
 .checkout-start {
