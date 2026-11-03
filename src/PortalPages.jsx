@@ -48,6 +48,7 @@ function HomeLink({ label }) {
 function PortalFrame({ children, audience = "customer" }) {
   const { user, supabase } = useAuth();
   const [signOutError, setSignOutError] = useState("");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const isRestaurant = audience === "restaurant";
   const links = isRestaurant
     ? [
@@ -64,6 +65,15 @@ function PortalFrame({ children, audience = "customer" }) {
         ["/customer/dashboard/favorites", "Favorites"],
         ["/customer/dashboard/profile", "Profile"],
       ];
+
+  useEffect(() => {
+    if (!mobileSidebarOpen) return undefined;
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setMobileSidebarOpen(false);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileSidebarOpen]);
 
   return (
     <div className="portal-page" data-audience={audience}>
@@ -83,16 +93,46 @@ function PortalFrame({ children, audience = "customer" }) {
             Sign out
           </button>
           <HomeLink label="Visit homepage" />
+          <button
+            className="portal-sidebar-toggle"
+            type="button"
+            aria-label={mobileSidebarOpen ? "Close dashboard navigation" : "Open dashboard navigation"}
+            aria-expanded={mobileSidebarOpen}
+            aria-controls="dashboard-sidebar"
+            onClick={() => setMobileSidebarOpen((open) => !open)}
+          >
+            <span aria-hidden="true">{mobileSidebarOpen ? "×" : "☰"}</span>
+          </button>
         </div>
       </header>
+      {mobileSidebarOpen && (
+        <button
+          className="portal-sidebar-backdrop"
+          type="button"
+          aria-label="Close dashboard navigation"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
       <div className="portal-layout">
-        <aside className="portal-sidebar">
+        <aside
+          className={`portal-sidebar${mobileSidebarOpen ? " is-open" : ""}`}
+          id="dashboard-sidebar"
+          aria-label={`${audience} workspace navigation`}
+        >
           <div className="portal-sidebar-heading">
             <span className="portal-avatar">{isRestaurant ? "R" : "Q"}</span>
             <div>
               <strong>{isRestaurant ? "Restaurant workspace" : audience === "admin" ? "QuickCrave admin" : "Customer workspace"}</strong>
               <span>{isRestaurant ? "Manage your business" : audience === "admin" ? "Manage the marketplace" : "Find your next favorite"}</span>
             </div>
+            <button
+              className="portal-sidebar-close"
+              type="button"
+              aria-label="Close dashboard navigation"
+              onClick={() => setMobileSidebarOpen(false)}
+            >
+              ×
+            </button>
           </div>
           <nav aria-label={`${audience} dashboard`}>
             <span className="portal-nav-caption">WORKSPACE</span>
@@ -102,6 +142,7 @@ function PortalFrame({ children, audience = "customer" }) {
                 key={to}
                 to={to}
                 className={({ isActive }) => `portal-nav-link${isActive ? " is-active" : ""}`}
+                onClick={() => setMobileSidebarOpen(false)}
               >
                 <span aria-hidden="true">{navIcon(label)}</span>
                 {label}
@@ -111,7 +152,7 @@ function PortalFrame({ children, audience = "customer" }) {
           <div className="portal-sidebar-footer">
             <span className="portal-footer-mark" aria-hidden="true">✦</span>
             <p>Good food starts close to home.</p>
-            <Link to="/">Explore QuickCrave</Link>
+            <Link to="/" onClick={() => setMobileSidebarOpen(false)}>Explore QuickCrave</Link>
           </div>
         </aside>
         <main className="portal-main">
@@ -475,6 +516,7 @@ function CustomerDashboard({ section = "discover" }) {
   const [menuOffers, setMenuOffers] = useState([]);
   const [restaurantsLoading, setRestaurantsLoading] = useState(section === "discover");
   const [restaurantsError, setRestaurantsError] = useState("");
+  const [restaurantsReloadKey, setRestaurantsReloadKey] = useState(0);
   const [orderCart, setOrderCart] = useState([]);
   const [cartRestaurantId, setCartRestaurantId] = useState("");
   const [orderError, setOrderError] = useState("");
@@ -484,6 +526,8 @@ function CustomerDashboard({ section = "discover" }) {
   const [customerOrders, setCustomerOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(section === "orders");
   const [ordersError, setOrdersError] = useState("");
+  const [ordersReloadKey, setOrdersReloadKey] = useState(0);
+  const [cancellingOrderId, setCancellingOrderId] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const [submittedLocation, setSubmittedLocation] = useState("");
   const [profile, setProfile] = useState({
@@ -547,7 +591,7 @@ function CustomerDashboard({ section = "discover" }) {
     return () => {
       active = false;
     };
-  }, [activeSection, supabase]);
+  }, [activeSection, restaurantsReloadKey, supabase]);
 
   useEffect(() => {
     let active = true;
@@ -626,7 +670,7 @@ function CustomerDashboard({ section = "discover" }) {
     return () => {
       active = false;
     };
-  }, [activeSection, supabase]);
+  }, [activeSection, ordersReloadKey, supabase]);
 
   async function saveCustomerProfile(event) {
     event.preventDefault();
@@ -739,24 +783,32 @@ function CustomerDashboard({ section = "discover" }) {
   }
 
   async function cancelCustomerOrder(orderId) {
+    setCancellingOrderId(orderId);
     setOrdersError("");
     const { error } = await supabase.rpc("cancel_order_request", {
       target_order_id: orderId,
     });
     if (error) {
       setOrdersError(error.message);
+      setCancellingOrderId("");
       return;
     }
     setCustomerOrders((current) => current.map((order) =>
       order.id === orderId ? { ...order, status: "cancelled" } : order,
     ));
+    setCancellingOrderId("");
   }
 
   const visibleRestaurants = restaurants.filter((restaurant) => {
-    if (!submittedLocation) return true;
-    return restaurant.location
-      .toLocaleLowerCase()
-      .includes(submittedLocation.toLocaleLowerCase());
+    const query = submittedLocation.toLocaleLowerCase();
+    if (!query) return true;
+    return restaurant.name.toLocaleLowerCase().includes(query)
+      || restaurant.location?.toLocaleLowerCase().includes(query)
+      || menuOffers.some((item) =>
+        item.restaurants.id === restaurant.id
+        && [item.name, item.description, item.category]
+          .some((value) => value?.toLocaleLowerCase().includes(query)),
+      );
   });
 
   return (
@@ -769,32 +821,64 @@ function CustomerDashboard({ section = "discover" }) {
               <span className="portal-panel-kicker">MADE FOR YOUR NEIGHBORHOOD</span>
               <h2>Find something delicious nearby.</h2>
               <p>Local restaurants and their menus will show up here when they join QuickCrave.</p>
-              <label className="location-search">
+              <form className="location-search" role="search" onSubmit={(event) => {
+                event.preventDefault();
+                setSubmittedLocation(locationQuery.trim());
+              }}>
                 <span aria-hidden="true">⌖</span>
                 <input
-                  aria-label="Your neighborhood or postcode"
-                  placeholder="Filter by neighborhood or city"
+                  aria-label="Search restaurants, dishes, or neighborhoods"
+                  placeholder="Restaurant, dish, or neighborhood"
                   value={locationQuery}
                   onChange={(event) => setLocationQuery(event.target.value)}
                 />
-                <button type="button" onClick={() => setSubmittedLocation(locationQuery.trim())}>Find food</button>
-              </label>
+                <button type="submit">Search</button>
+              </form>
             </div>
             <span className="welcome-illustration" aria-hidden="true">✦</span>
           </section>
           <div className="dashboard-section-heading">
-            <div><h2>Explore local favorites</h2><p>Restaurants serving your area will appear in this feed.</p></div>
-            <span className="feed-filter">Near you <span aria-hidden="true">⌄</span></span>
+            <div>
+              <h2>{submittedLocation ? "Search results" : "Explore local favorites"}</h2>
+              <p>{restaurantsLoading ? "Finding restaurants and menus…" : `${visibleRestaurants.length} ${visibleRestaurants.length === 1 ? "restaurant" : "restaurants"}${submittedLocation ? ` matching “${submittedLocation}”` : " to explore"}.`}</p>
+            </div>
+            {submittedLocation && (
+              <button
+                className="feed-filter feed-filter-button"
+                type="button"
+                onClick={() => {
+                  setLocationQuery("");
+                  setSubmittedLocation("");
+                }}
+              >
+                Clear search
+              </button>
+            )}
           </div>
           {restaurantsLoading ? (
-            <EmptyState icon="◷" title="Finding restaurants" text="Loading restaurants serving your area." />
+            <LoadingState label="Finding restaurants" />
           ) : restaurantsError ? (
-            <p className="auth-error" role="alert">Couldn’t load restaurants: {restaurantsError}</p>
+            <div className="dashboard-error" role="alert">
+              <p>Couldn’t load restaurants: {restaurantsError}</p>
+              <button className="secondary-button" type="button" onClick={() => setRestaurantsReloadKey((key) => key + 1)}>Try again</button>
+            </div>
           ) : visibleRestaurants.length === 0 ? (
             <EmptyState
               icon="⌕"
               title={restaurants.length === 0 ? "No restaurants are listed yet" : "No restaurants found in that area"}
-              text={restaurants.length === 0 ? "Check back as neighborhood restaurants join QuickCrave." : "Try another neighborhood or clear your search."}
+              text={restaurants.length === 0 ? "Check back as neighborhood restaurants join QuickCrave." : "Try another restaurant, dish, or neighborhood."}
+              action={restaurants.length > 0 && (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => {
+                    setLocationQuery("");
+                    setSubmittedLocation("");
+                  }}
+                >
+                  Clear search
+                </button>
+              )}
             />
           ) : (
             <div className="restaurant-feed-grid">
@@ -834,6 +918,9 @@ function CustomerDashboard({ section = "discover" }) {
                     </ul>
                     {menuOffers.some((item) => item.restaurants.id === restaurant.id) && (
                       <p className="feed-order-note">Prices and availability are confirmed by the restaurant after you send a request.</p>
+                    )}
+                    {!menuOffers.some((item) => item.restaurants.id === restaurant.id) && (
+                      <p className="feed-order-note">No available dishes are listed yet.</p>
                     )}
                   </div>
                 </article>
@@ -884,11 +971,19 @@ function CustomerDashboard({ section = "discover" }) {
       )}
       {activeSection === "orders" && (
         ordersLoading ? (
-          <EmptyState icon="◷" title="Loading your orders" text="Fetching your submitted order requests." />
+          <LoadingState label="Loading your order requests" rows={2} />
         ) : ordersError ? (
-          <p className="auth-error" role="alert">{ordersError}</p>
+          <div className="dashboard-error" role="alert">
+            <p>Couldn’t load your order requests: {ordersError}</p>
+            <button className="secondary-button" type="button" onClick={() => setOrdersReloadKey((key) => key + 1)}>Try again</button>
+          </div>
         ) : customerOrders.length === 0 ? (
-          <EmptyState icon="▤" title="No orders yet" text="Your submitted order requests and restaurant updates will appear here." />
+          <EmptyState
+            icon="▤"
+            title="Your next great meal starts here"
+            text="Once you send a request to a restaurant, you can follow its status and find the details here."
+            action={<Link className="hero-primary-button" to="/customer/dashboard">Explore restaurants <span aria-hidden="true">→</span></Link>}
+          />
         ) : (
           <div className="order-request-list">
             {customerOrders.map((order) => (
@@ -900,6 +995,7 @@ function CustomerDashboard({ section = "discover" }) {
                   </div>
                   <span className={`status-pill status-${order.status}`}>{order.status.replaceAll("_", " ")}</span>
                 </div>
+                <OrderProgress status={order.status} />
                 <ul className="order-cart-list">
                   {order.items.map((item) => (
                     <li key={item.id}>
@@ -912,7 +1008,14 @@ function CustomerDashboard({ section = "discover" }) {
                 <p className="order-delivery-summary">Delivery to: {order.delivery_address} · Contact: {order.customer_phone}</p>
                 {order.customer_note && <p className="order-delivery-summary">Note: {order.customer_note}</p>}
                 {order.status === "submitted" && (
-                  <button className="secondary-button" type="button" onClick={() => cancelCustomerOrder(order.id)}>Cancel request</button>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    disabled={cancellingOrderId === order.id}
+                    onClick={() => cancelCustomerOrder(order.id)}
+                  >
+                    {cancellingOrderId === order.id ? "Cancelling…" : "Cancel request"}
+                  </button>
                 )}
               </article>
             ))}
@@ -920,7 +1023,12 @@ function CustomerDashboard({ section = "discover" }) {
         )
       )}
       {activeSection === "favorites" && (
-        <EmptyState icon="♡" title="Your saved places will live here" text="Save a restaurant or dish from your local feed to find it quickly next time." />
+        <EmptyState
+          icon="♡"
+          title="Keep your go-to dishes close"
+          text="Your saved restaurants and dishes will be easy to find here. Browse the local feed to discover a new favorite."
+          action={<Link className="hero-primary-button" to="/customer/dashboard">Discover restaurants <span aria-hidden="true">→</span></Link>}
+        />
       )}
       {activeSection === "profile" && (
         <>
@@ -970,12 +1078,13 @@ function RestaurantDashboard({ section = "overview" }) {
   const [restaurantRole, setRestaurantRole] = useState("");
   const [restaurantLoading, setRestaurantLoading] = useState(true);
   const [restaurantError, setRestaurantError] = useState("");
+  const [workspaceReloadKey, setWorkspaceReloadKey] = useState(0);
   const [menuItems, setMenuItems] = useState([]);
   const [restaurantOrders, setRestaurantOrders] = useState([]);
-  const [orderInboxLoading, setOrderInboxLoading] = useState(section === "orders");
+  const [orderInboxLoading, setOrderInboxLoading] = useState(section === "orders" || section === "overview");
   const [orderInboxError, setOrderInboxError] = useState("");
   const [updatingOrderId, setUpdatingOrderId] = useState("");
-  const [menuLoading, setMenuLoading] = useState(section === "menu");
+  const [menuLoading, setMenuLoading] = useState(section === "menu" || section === "overview");
   const [menuError, setMenuError] = useState("");
   const [dishName, setDishName] = useState("");
   const [dishDescription, setDishDescription] = useState("");
@@ -1009,11 +1118,15 @@ function RestaurantDashboard({ section = "overview" }) {
       if (membershipError) {
         setRestaurantError(membershipError.message);
         setRestaurantLoading(false);
+        setOrderInboxLoading(false);
+        setMenuLoading(false);
         return;
       }
       if (!membership) {
         setRestaurantError("No restaurant workspace is linked to this account.");
         setRestaurantLoading(false);
+        setOrderInboxLoading(false);
+        setMenuLoading(false);
         return;
       }
       setRestaurantRole(membership.role);
@@ -1056,11 +1169,11 @@ function RestaurantDashboard({ section = "overview" }) {
     return () => {
       active = false;
     };
-  }, [supabase, user.id]);
+  }, [supabase, user.id, workspaceReloadKey]);
 
   useEffect(() => {
     let active = true;
-    if (section !== "menu" || !restaurant?.id) return undefined;
+    if ((section !== "menu" && section !== "overview") || !restaurant?.id) return undefined;
 
     async function loadMenu() {
       setMenuLoading(true);
@@ -1083,11 +1196,11 @@ function RestaurantDashboard({ section = "overview" }) {
     return () => {
       active = false;
     };
-  }, [restaurant?.id, section, supabase]);
+  }, [restaurant?.id, section, supabase, workspaceReloadKey]);
 
   useEffect(() => {
     let active = true;
-    if (section !== "orders" || !restaurant?.id) return undefined;
+    if ((section !== "orders" && section !== "overview") || !restaurant?.id) return undefined;
 
     async function loadRestaurantOrders() {
       setOrderInboxLoading(true);
@@ -1105,7 +1218,7 @@ function RestaurantDashboard({ section = "overview" }) {
       }
 
       const ids = (orders ?? []).map((order) => order.id);
-      if (ids.length) {
+      if (ids.length && section === "orders") {
         const { data: items, error: itemsError } = await supabase
           .from("order_request_items")
           .select("id, order_request_id, item_name, unit_price, quantity, line_total")
@@ -1127,7 +1240,7 @@ function RestaurantDashboard({ section = "overview" }) {
           items: itemsByOrder.get(order.id) ?? [],
         })));
       } else {
-        setRestaurantOrders([]);
+        setRestaurantOrders((orders ?? []).map((order) => ({ ...order, items: [] })));
       }
       setOrderInboxLoading(false);
     }
@@ -1136,7 +1249,7 @@ function RestaurantDashboard({ section = "overview" }) {
     return () => {
       active = false;
     };
-  }, [restaurant?.id, section, supabase]);
+  }, [restaurant?.id, section, supabase, workspaceReloadKey]);
 
   async function addMenuItem(event) {
     event.preventDefault();
@@ -1348,7 +1461,12 @@ function RestaurantDashboard({ section = "overview" }) {
   return (
     <PortalFrame audience="restaurant">
       {restaurantLoading && <ServiceStatus>Loading your restaurant workspace…</ServiceStatus>}
-      {restaurantError && <p className="auth-error" role="alert">{restaurantError}</p>}
+      {restaurantError && (
+        <div className="dashboard-error" role="alert">
+          <p>{restaurantError}</p>
+          <button className="secondary-button" type="button" onClick={() => setWorkspaceReloadKey((key) => key + 1)}>Try again</button>
+        </div>
+      )}
       <DashboardHeader
         eyebrow={heading[0]}
         title={heading[1]}
@@ -1359,30 +1477,114 @@ function RestaurantDashboard({ section = "overview" }) {
         <>
           <section className="restaurant-setup-panel">
             <div className="setup-icon" aria-hidden="true">R</div>
-            <div><span className="portal-panel-kicker">GET YOUR RESTAURANT READY</span><h2>{restaurant?.name || "Set up your restaurant workspace"}</h2><p>{restaurant?.status === "pending" ? "Your restaurant profile is awaiting review. You can prepare the menu while it is under review." : "Complete your profile and prepare your menu for review."}</p></div>
-            <Link className="text-arrow-link" to="/restaurant/dashboard/settings">Review setup <span aria-hidden="true">→</span></Link>
+            <div>
+              <span className="portal-panel-kicker">{restaurant?.status === "approved" ? "YOUR RESTAURANT IS LIVE" : "GET YOUR RESTAURANT READY"}</span>
+              <h2>{restaurant?.name || "Set up your restaurant workspace"}</h2>
+              <p>
+                {restaurant?.status === "approved"
+                  ? "Keep your details and menu up to date so customers can find you and request their favorites."
+                  : restaurant?.status === "pending"
+                    ? "Your profile is awaiting review. You can prepare your menu while QuickCrave reviews your restaurant."
+                    : "Complete your profile and prepare your menu before your restaurant goes live."}
+              </p>
+            </div>
+            <Link className="text-arrow-link" to="/restaurant/dashboard/settings">
+              {restaurant?.status === "approved" ? "Update profile" : "Review setup"} <span aria-hidden="true">→</span>
+            </Link>
           </section>
           <div className="restaurant-metrics">
-            <MetricCard label="New orders" value="—" detail="Orders will appear here" icon="▤" />
-            <MetricCard label="Menu items" value={String(menuItems.length)} detail="Manage your menu" icon="☷" />
-            <MetricCard label="Restaurant status" value={restaurant?.status ?? "—"} detail={restaurant?.location || "Complete your profile"} icon="◷" />
+            <MetricCard
+              label="Needs your attention"
+              value={orderInboxLoading ? "…" : String(restaurantOrders.filter((order) => order.status === "submitted").length)}
+              detail="New customer requests"
+              icon="▤"
+            />
+            <MetricCard
+              label="Available dishes"
+              value={menuLoading ? "…" : String(menuItems.filter((item) => item.is_available).length)}
+              detail={menuLoading ? "Loading your menu" : `${menuItems.length} total menu ${menuItems.length === 1 ? "item" : "items"}`}
+              icon="☷"
+            />
+            <MetricCard
+              label="Restaurant status"
+              value={restaurant?.status ?? "—"}
+              detail={restaurant?.location || "Complete your profile"}
+              icon="◷"
+            />
           </div>
-          <div className="dashboard-section-heading"><div><h2>Today’s activity</h2><p>Order requests and menu updates at a glance.</p></div><Link className="text-arrow-link" to="/restaurant/dashboard/orders">View orders <span aria-hidden="true">→</span></Link></div>
-          <section className="portal-card restaurant-order-callout">
-            <h2>Manage customer requests</h2>
-            <p>Review incoming requests in your order inbox, then contact customers to confirm payment and delivery.</p>
-            <Link className="hero-primary-button" to="/restaurant/dashboard/orders">Open order inbox <span aria-hidden="true">→</span></Link>
+          {(orderInboxError || menuError) && (
+            <div className="dashboard-error" role="alert">
+              <p>Couldn’t load all workspace activity: {[orderInboxError, menuError].filter(Boolean).join(" ")}</p>
+              <button className="secondary-button" type="button" onClick={() => setWorkspaceReloadKey((key) => key + 1)}>Try again</button>
+            </div>
+          )}
+          <div className="dashboard-section-heading">
+            <div><h2>Requests that need attention</h2><p>Accept a request to confirm you’re working on it, then coordinate payment and delivery directly.</p></div>
+            <Link className="text-arrow-link" to="/restaurant/dashboard/orders">Open order inbox <span aria-hidden="true">→</span></Link>
+          </div>
+          <section className="portal-card restaurant-command-center">
+            {orderInboxLoading ? (
+              <LoadingState label="Loading your latest requests" rows={2} />
+            ) : restaurantOrders.filter((order) => order.status === "submitted").length === 0 ? (
+              <EmptyState
+                icon="✓"
+                title="You’re all caught up"
+                text={restaurant?.status === "approved"
+                  ? "New customer requests will appear here. Make sure your menu is current and your dishes are available."
+                  : "Your restaurant must be approved before customers can submit requests."}
+                action={restaurant?.status === "approved"
+                  ? <Link className="secondary-button" to="/restaurant/dashboard/menu">Review your menu</Link>
+                  : null}
+              />
+            ) : (
+              <div className="restaurant-attention-list">
+                {restaurantOrders
+                  .filter((order) => order.status === "submitted")
+                  .slice(0, 3)
+                  .map((order) => (
+                    <article className="restaurant-attention-item" key={order.id}>
+                      <div>
+                        <span className="status-pill status-submitted">New request</span>
+                        <h3>{order.customer_name}</h3>
+                        <p>{new Date(order.created_at).toLocaleString()} · Request {order.id.slice(0, 8).toUpperCase()}</p>
+                      </div>
+                      <strong>{priceFormatter.format(Number(order.subtotal))}</strong>
+                      <div className="restaurant-attention-actions">
+                        <Link className="secondary-button" to="/restaurant/dashboard/orders">Details</Link>
+                        <button
+                          className="hero-primary-button"
+                          type="button"
+                          disabled={updatingOrderId === order.id}
+                          onClick={() => updateRestaurantOrder(order.id, "accepted")}
+                        >
+                          {updatingOrderId === order.id ? "Accepting…" : "Accept request"}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                {restaurantOrders.filter((order) => order.status === "submitted").length > 3 && (
+                  <Link className="restaurant-more-requests" to="/restaurant/dashboard/orders">
+                    See all {restaurantOrders.filter((order) => order.status === "submitted").length} new requests →
+                  </Link>
+                )}
+              </div>
+            )}
           </section>
         </>
       )}
       {activeSection === "orders" && (
         <section className="portal-card">
           <div className="card-title-row"><div><h2>Order inbox</h2><p>Requests submitted by customers. Confirm final price, payment, and delivery directly.</p></div><span className={`status-pill status-${restaurant?.status}`}>{restaurant?.status === "approved" ? "Accepting requests" : "Not public"}</span></div>
-          {orderInboxError && <p className="auth-error" role="alert">{orderInboxError}</p>}
+          {orderInboxError && (
+            <div className="dashboard-error" role="alert">
+              <p>{orderInboxError}</p>
+              <button className="secondary-button" type="button" onClick={() => setWorkspaceReloadKey((key) => key + 1)}>Try again</button>
+            </div>
+          )}
           {restaurant?.status !== "approved" ? (
             <EmptyState icon="◷" title="Your restaurant is not approved yet" text="You can review existing requests, but customers can only submit orders to approved restaurants." />
           ) : orderInboxLoading ? (
-            <EmptyState icon="◷" title="Loading requests" text="Checking for customer orders." />
+            <LoadingState label="Checking for customer requests" rows={2} />
           ) : restaurantOrders.length === 0 ? (
             <EmptyState icon="▤" title="No order requests yet" text="Customer requests will show up here." />
           ) : (
@@ -1468,9 +1670,12 @@ function RestaurantDashboard({ section = "overview" }) {
           <section className="portal-card menu-list-card">
             <div className="card-title-row"><div><h2>Menu items</h2><p>{menuItems.length} {menuItems.length === 1 ? "item" : "items"}</p></div></div>
             {menuLoading ? (
-              <p role="status">Loading your saved menu…</p>
+              <LoadingState label="Loading your menu" rows={3} />
             ) : menuError ? (
-              <p className="auth-error" role="alert">{menuError}</p>
+              <div className="dashboard-error" role="alert">
+                <p>{menuError}</p>
+                <button className="secondary-button" type="button" onClick={() => setWorkspaceReloadKey((key) => key + 1)}>Try again</button>
+              </div>
             ) : menuItems.length === 0 ? (
               <EmptyState icon="☷" title="Your menu is waiting" text="Add a dish above to start shaping your restaurant menu." />
             ) : (
@@ -1528,27 +1733,64 @@ function MetricCard({ label, value, detail, icon }) {
   );
 }
 
+function OrderProgress({ status }) {
+  const steps = [
+    ["submitted", "Request sent"],
+    ["accepted", "Accepted"],
+    ["preparing", "Preparing"],
+    ["ready", "Ready"],
+    ["completed", "Completed"],
+  ];
+  const currentStep = steps.findIndex(([step]) => step === status);
+
+  if (currentStep < 0) {
+    return (
+      <p className={`order-terminal-status status-${status}`}>
+        {status === "rejected" ? "The restaurant couldn’t accept this request." : "This request was cancelled."}
+      </p>
+    );
+  }
+
+  return (
+    <ol className="order-progress" aria-label="Order request progress">
+      {steps.map(([step, label], index) => (
+        <li
+          className={index < currentStep ? "is-complete" : index === currentStep ? "is-current" : ""}
+          key={step}
+          aria-current={index === currentStep ? "step" : undefined}
+        >
+          <span aria-hidden="true">{index < currentStep ? "✓" : index + 1}</span>
+          <small>{label}</small>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function AdminDashboard() {
   const { supabase } = useAuth();
   const [restaurants, setRestaurants] = useState([]);
   const [filter, setFilter] = useState("pending");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [updatingId, setUpdatingId] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [restaurantSearch, setRestaurantSearch] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
     async function loadRestaurants() {
       setLoading(true);
-      setError("");
+      setLoadError("");
       const { data, error: restaurantsError } = await supabase
         .from("restaurants")
         .select("id, name, location, opening_hours, status, created_at")
         .order("created_at", { ascending: false });
       if (!active) return;
       if (restaurantsError) {
-        setError(restaurantsError.message);
+        setLoadError(restaurantsError.message);
         setLoading(false);
         return;
       }
@@ -1561,7 +1803,7 @@ function AdminDashboard() {
           .in("restaurant_id", restaurantIds);
         if (!active) return;
         if (contactsError) {
-          setError(contactsError.message);
+          setLoadError(contactsError.message);
           setLoading(false);
           return;
         }
@@ -1582,7 +1824,7 @@ function AdminDashboard() {
     return () => {
       active = false;
     };
-  }, [supabase]);
+  }, [reloadKey, supabase]);
 
   async function updateRestaurantStatus(restaurant, status) {
     setUpdatingId(restaurant.id);
@@ -1605,10 +1847,19 @@ function AdminDashboard() {
     setUpdatingId("");
   }
 
-  const visibleRestaurants = filter === "all"
-    ? restaurants
-    : restaurants.filter((restaurant) => restaurant.status === filter);
+  const visibleRestaurants = restaurants.filter((restaurant) => {
+    const matchesStatus = filter === "all" || restaurant.status === filter;
+    const query = restaurantSearch.trim().toLocaleLowerCase();
+    const matchesSearch = !query || [
+      restaurant.name,
+      restaurant.location,
+      restaurant.contacts?.contact_email,
+      restaurant.contacts?.phone,
+    ].some((value) => value?.toLocaleLowerCase().includes(query));
+    return matchesStatus && matchesSearch;
+  });
   const pendingCount = restaurants.filter((restaurant) => restaurant.status === "pending").length;
+  const approvedCount = restaurants.filter((restaurant) => restaurant.status === "approved").length;
 
   return (
     <PortalFrame audience="admin">
@@ -1616,31 +1867,59 @@ function AdminDashboard() {
         eyebrow="MARKETPLACE ADMINISTRATION"
         title="Restaurant review"
         description="Review restaurant registrations and manage their marketplace approval."
-        action={<span className="status-pill">{pendingCount} pending</span>}
+        action={<span className="status-pill">{loading ? "Loading applications…" : loadError ? "Unavailable" : `${pendingCount} pending`}</span>}
       />
-      {error && <p className="auth-error" role="alert">{error}</p>}
+      {error && (
+        <div className="dashboard-error" role="alert">
+          <p>Couldn’t update restaurant status: {error}</p>
+        </div>
+      )}
       {statusMessage && <p className="profile-status" role="status">{statusMessage}</p>}
+      <div className="admin-overview-metrics">
+        <MetricCard label="Awaiting review" value={loading ? "…" : loadError ? "—" : String(pendingCount)} detail="Applications to check" icon="◷" />
+        <MetricCard label="Approved" value={loading ? "…" : loadError ? "—" : String(approvedCount)} detail="Restaurants listed" icon="✓" />
+        <MetricCard label="Total restaurants" value={loading ? "…" : loadError ? "—" : String(restaurants.length)} detail="Across all statuses" icon="▤" />
+      </div>
       <section className="portal-card admin-review-card">
         <div className="card-title-row">
           <div><h2>Restaurant applications</h2><p>Confirm the business details before making a restaurant public.</p></div>
-          <label className="admin-filter">
-            <span className="visually-hidden">Filter restaurants</span>
-            <select value={filter} onChange={(event) => setFilter(event.target.value)}>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="suspended">Suspended</option>
-              <option value="all">All restaurants</option>
-            </select>
-          </label>
+          <div className="admin-review-controls">
+            <label className="admin-search">
+              <span className="visually-hidden">Search restaurant applications</span>
+              <input
+                type="search"
+                placeholder="Search restaurants"
+                value={restaurantSearch}
+                onChange={(event) => setRestaurantSearch(event.target.value)}
+              />
+            </label>
+            <label className="admin-filter">
+              <span className="visually-hidden">Filter restaurants</span>
+              <select value={filter} onChange={(event) => setFilter(event.target.value)}>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="suspended">Suspended</option>
+                <option value="all">All restaurants</option>
+              </select>
+            </label>
+          </div>
         </div>
         {loading ? (
-          <p role="status">Loading restaurant applications…</p>
+          <LoadingState label="Loading restaurant applications" rows={3} />
+        ) : loadError ? (
+          <div className="dashboard-error" role="alert">
+            <p>Couldn’t load restaurant applications: {loadError}</p>
+            <button className="secondary-button" type="button" onClick={() => setReloadKey((key) => key + 1)}>Try again</button>
+          </div>
         ) : visibleRestaurants.length === 0 ? (
           <EmptyState
             icon="✓"
-            title={filter === "pending" ? "No applications awaiting review" : "No restaurants in this list"}
-            text={filter === "pending" ? "New restaurant registrations will appear here." : "Choose another status filter to review restaurants."}
+            title={restaurantSearch ? "No matching restaurants" : filter === "pending" ? "No applications awaiting review" : "No restaurants in this list"}
+            text={restaurantSearch ? "Try another name, location, email, or phone number." : filter === "pending" ? "New restaurant registrations will appear here." : "Choose another status filter to review restaurants."}
+            action={restaurantSearch && (
+              <button className="secondary-button" type="button" onClick={() => setRestaurantSearch("")}>Clear search</button>
+            )}
           />
         ) : (
           <ul className="admin-restaurant-list">
@@ -1700,13 +1979,25 @@ function AdminDashboard() {
   );
 }
 
-function EmptyState({ icon, title, text }) {
+function EmptyState({ icon, title, text, action }) {
   return (
     <section className="empty-state">
       <span className="empty-state-icon" aria-hidden="true">{icon}</span>
       <h2>{title}</h2>
       <p>{text}</p>
+      {action}
     </section>
+  );
+}
+
+function LoadingState({ label, rows = 1 }) {
+  return (
+    <div className="loading-state" role="status" aria-label={label}>
+      <span className="loading-state-label">{label}…</span>
+      {Array.from({ length: rows }, (_, index) => (
+        <span className="loading-state-row" key={index} />
+      ))}
+    </div>
   );
 }
 
