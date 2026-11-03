@@ -8,6 +8,13 @@ const priceFormatter = new Intl.NumberFormat("en-NG", {
   maximumFractionDigits: 2,
 });
 
+function getWhatsAppNumber(phone) {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("0") && digits.length === 11) return `234${digits.slice(1)}`;
+  if (digits.startsWith("234")) return digits;
+  return digits;
+}
+
 function PortalBrand() {
   return (
     <Link className="portal-brand" to="/" aria-label="QuickCrave home">
@@ -59,7 +66,7 @@ function PortalFrame({ children, audience = "customer" }) {
       ];
 
   return (
-    <div className="portal-page">
+    <div className="portal-page" data-audience={audience}>
       <header className="portal-topbar">
         <PortalBrand />
         <div className="portal-topbar-right">
@@ -83,11 +90,12 @@ function PortalFrame({ children, audience = "customer" }) {
           <div className="portal-sidebar-heading">
             <span className="portal-avatar">{isRestaurant ? "R" : "Q"}</span>
             <div>
-              <strong>{isRestaurant ? "Restaurant account" : audience === "admin" ? "QuickCrave admin" : "Welcome to QuickCrave"}</strong>
+              <strong>{isRestaurant ? "Restaurant workspace" : audience === "admin" ? "QuickCrave admin" : "Customer workspace"}</strong>
               <span>{isRestaurant ? "Manage your business" : audience === "admin" ? "Manage the marketplace" : "Find your next favorite"}</span>
             </div>
           </div>
           <nav aria-label={`${audience} dashboard`}>
+            <span className="portal-nav-caption">WORKSPACE</span>
             {links.map(([to, label]) => (
               <NavLink
                 end={to.endsWith("/dashboard")}
@@ -101,8 +109,9 @@ function PortalFrame({ children, audience = "customer" }) {
             ))}
           </nav>
           <div className="portal-sidebar-footer">
-            <p>Need help?</p>
-            <a href="mailto:hello@quickcrave.example">Contact QuickCrave</a>
+            <span className="portal-footer-mark" aria-hidden="true">✦</span>
+            <p>Good food starts close to home.</p>
+            <Link to="/">Explore QuickCrave</Link>
           </div>
         </aside>
         <main className="portal-main">
@@ -466,6 +475,15 @@ function CustomerDashboard({ section = "discover" }) {
   const [menuOffers, setMenuOffers] = useState([]);
   const [restaurantsLoading, setRestaurantsLoading] = useState(section === "discover");
   const [restaurantsError, setRestaurantsError] = useState("");
+  const [orderCart, setOrderCart] = useState([]);
+  const [cartRestaurantId, setCartRestaurantId] = useState("");
+  const [orderError, setOrderError] = useState("");
+  const [orderStatus, setOrderStatus] = useState("");
+  const [orderSubmitting, setOrderSubmitting] = useState(false);
+  const [orderNote, setOrderNote] = useState("");
+  const [customerOrders, setCustomerOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(section === "orders");
+  const [ordersError, setOrdersError] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const [submittedLocation, setSubmittedLocation] = useState("");
   const [profile, setProfile] = useState({
@@ -533,10 +551,10 @@ function CustomerDashboard({ section = "discover" }) {
 
   useEffect(() => {
     let active = true;
-    if (activeSection !== "profile") return undefined;
+    if (activeSection !== "profile" && activeSection !== "discover") return undefined;
 
     async function loadProfile() {
-      setProfileLoading(true);
+      if (activeSection === "profile") setProfileLoading(true);
       setProfileError("");
       const { data, error } = await supabase
         .from("profiles")
@@ -549,7 +567,7 @@ function CustomerDashboard({ section = "discover" }) {
       } else if (data) {
         setProfile(data);
       }
-      setProfileLoading(false);
+      if (activeSection === "profile") setProfileLoading(false);
     }
 
     loadProfile();
@@ -557,6 +575,58 @@ function CustomerDashboard({ section = "discover" }) {
       active = false;
     };
   }, [activeSection, supabase, user.id]);
+
+  useEffect(() => {
+    let active = true;
+    if (activeSection !== "orders") return undefined;
+
+    async function loadCustomerOrders() {
+      setOrdersLoading(true);
+      setOrdersError("");
+      const { data: orders, error } = await supabase
+        .from("order_requests")
+        .select("id, restaurant_id, status, customer_name, customer_phone, delivery_address, customer_note, subtotal, created_at, restaurants(name)")
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      if (error) {
+        setOrdersError(error.message);
+        setOrdersLoading(false);
+        return;
+      }
+
+      const ids = (orders ?? []).map((order) => order.id);
+      if (ids.length) {
+        const { data: items, error: itemsError } = await supabase
+          .from("order_request_items")
+          .select("id, order_request_id, item_name, unit_price, quantity, line_total")
+          .in("order_request_id", ids);
+        if (!active) return;
+        if (itemsError) {
+          setOrdersError(itemsError.message);
+          setOrdersLoading(false);
+          return;
+        }
+        const itemsByOrder = new Map();
+        for (const item of items ?? []) {
+          const current = itemsByOrder.get(item.order_request_id) ?? [];
+          current.push(item);
+          itemsByOrder.set(item.order_request_id, current);
+        }
+        setCustomerOrders((orders ?? []).map((order) => ({
+          ...order,
+          items: itemsByOrder.get(order.id) ?? [],
+        })));
+      } else {
+        setCustomerOrders([]);
+      }
+      setOrdersLoading(false);
+    }
+
+    loadCustomerOrders();
+    return () => {
+      active = false;
+    };
+  }, [activeSection, supabase]);
 
   async function saveCustomerProfile(event) {
     event.preventDefault();
@@ -601,6 +671,85 @@ function CustomerDashboard({ section = "discover" }) {
     setPasswordStatus("Your password has been updated.");
     setNewPassword("");
     setPasswordConfirmation("");
+  }
+
+  function addToOrder(item, restaurantId) {
+    setOrderError("");
+    setOrderStatus("");
+    if (cartRestaurantId && cartRestaurantId !== restaurantId) {
+      setOrderError("Order requests can include dishes from one restaurant at a time. Clear your current request to choose another restaurant.");
+      return;
+    }
+    setCartRestaurantId(restaurantId);
+    setOrderCart((current) => {
+      const existing = current.find((entry) => entry.id === item.id);
+      if (existing) {
+        return current.map((entry) =>
+          entry.id === item.id ? { ...entry, quantity: Math.min(entry.quantity + 1, 20) } : entry,
+        );
+      }
+      return [...current, { ...item, quantity: 1 }];
+    });
+  }
+
+  function changeOrderQuantity(itemId, difference) {
+    const selectedItem = orderCart.find((item) => item.id === itemId);
+    if (selectedItem && selectedItem.quantity + difference <= 0 && orderCart.length === 1) {
+      setCartRestaurantId("");
+    }
+    setOrderCart((current) => current
+      .map((item) => item.id === itemId
+        ? { ...item, quantity: item.quantity + difference }
+        : item)
+      .filter((item) => item.quantity > 0));
+    setOrderError("");
+  }
+
+  function clearOrderCart() {
+    setOrderCart([]);
+    setCartRestaurantId("");
+    setOrderError("");
+    setOrderStatus("");
+  }
+
+  async function submitOrderRequest(event) {
+    event.preventDefault();
+    setOrderError("");
+    setOrderStatus("");
+    if (!orderCart.length || !cartRestaurantId) {
+      setOrderError("Add at least one dish to your order request.");
+      return;
+    }
+    setOrderSubmitting(true);
+    const { data, error } = await supabase.rpc("create_order_request", {
+      target_restaurant_id: cartRestaurantId,
+      requested_items: orderCart.map((item) => ({ id: item.id, quantity: item.quantity })),
+      delivery_address: profile.delivery_address,
+      customer_phone: profile.phone,
+      customer_note: orderNote,
+    });
+    setOrderSubmitting(false);
+    if (error) {
+      setOrderError(error.message);
+      return;
+    }
+    clearOrderCart();
+    setOrderNote("");
+    setOrderStatus(`Order request ${String(data).slice(0, 8).toUpperCase()} was sent to the restaurant. They’ll contact you to confirm availability, payment, and delivery.`);
+  }
+
+  async function cancelCustomerOrder(orderId) {
+    setOrdersError("");
+    const { error } = await supabase.rpc("cancel_order_request", {
+      target_order_id: orderId,
+    });
+    if (error) {
+      setOrdersError(error.message);
+      return;
+    }
+    setCustomerOrders((current) => current.map((order) =>
+      order.id === orderId ? { ...order, status: "cancelled" } : order,
+    ));
   }
 
   const visibleRestaurants = restaurants.filter((restaurant) => {
@@ -663,15 +812,70 @@ function CustomerDashboard({ section = "discover" }) {
                           <li key={item.id}>
                             <span><strong>{item.name}</strong><small>{item.description || item.category}</small></span>
                             <strong>{priceFormatter.format(Number(item.price))}</strong>
+                            <span className="order-item-control">
+                              {orderCart.some((selected) => selected.id === item.id) ? (
+                                <>
+                                  <button type="button" aria-label={`Remove one ${item.name}`} onClick={() => changeOrderQuantity(item.id, -1)}>−</button>
+                                  <span>{orderCart.find((selected) => selected.id === item.id)?.quantity}</span>
+                                  <button type="button" aria-label={`Add one ${item.name}`} disabled={orderCart.find((selected) => selected.id === item.id)?.quantity >= 20} onClick={() => addToOrder(item, restaurant.id)}>+</button>
+                                </>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={Boolean(cartRestaurantId && cartRestaurantId !== restaurant.id)}
+                                  onClick={() => addToOrder(item, restaurant.id)}
+                                >
+                                  Add
+                                </button>
+                              )}
+                            </span>
                           </li>
                         ))}
                     </ul>
-                    <p className="feed-order-note">Order requests will be enabled soon.</p>
+                    {menuOffers.some((item) => item.restaurants.id === restaurant.id) && (
+                      <p className="feed-order-note">Prices and availability are confirmed by the restaurant after you send a request.</p>
+                    )}
                   </div>
                 </article>
               ))}
             </div>
           )}
+          {orderCart.length > 0 && (
+            <form className="portal-card order-request-form" onSubmit={submitOrderRequest}>
+              <div className="card-title-row">
+                <div>
+                  <h2>Send your order request</h2>
+                  <p>{orderCart[0].restaurants.name} · Payment and delivery are arranged directly with the restaurant.</p>
+                </div>
+                <button className="menu-cancel-button" type="button" onClick={clearOrderCart}>Clear request</button>
+              </div>
+              <ul className="order-cart-list">
+                {orderCart.map((item) => (
+                  <li key={item.id}>
+                    <span>{item.quantity} × {item.name}</span>
+                    <strong>{priceFormatter.format(Number(item.price) * item.quantity)}</strong>
+                  </li>
+                ))}
+                <li className="order-cart-total">
+                  <span>Estimated subtotal</span>
+                  <strong>{priceFormatter.format(orderCart.reduce((total, item) => total + Number(item.price) * item.quantity, 0))}</strong>
+                </li>
+              </ul>
+              <div className="profile-fields">
+                <label>Your name<input value={profile.full_name} onChange={(event) => setProfile({ ...profile, full_name: event.target.value })} autoComplete="name" required maxLength={120} /></label>
+                <label>Phone number<input type="tel" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} autoComplete="tel" required maxLength={40} /></label>
+                <label className="profile-address-field">Delivery address<input value={profile.delivery_address} onChange={(event) => setProfile({ ...profile, delivery_address: event.target.value })} autoComplete="street-address" required maxLength={500} /></label>
+                <label className="profile-address-field">Note for the restaurant<textarea value={orderNote} onChange={(event) => setOrderNote(event.target.value)} maxLength={1000} rows={3} placeholder="Optional delivery or meal notes" /></label>
+              </div>
+              {orderError && <p className="auth-error" role="alert">{orderError}</p>}
+              <button className="hero-primary-button profile-save" type="submit" disabled={orderSubmitting}>
+                {orderSubmitting ? "Sending request…" : "Send order request"}
+                <span aria-hidden="true">→</span>
+              </button>
+              <p className="order-request-disclaimer">This is a request, not a confirmed order. The restaurant will contact you about availability, final cost, payment, and delivery.</p>
+            </form>
+          )}
+          {orderStatus && <p className="profile-status" role="status">{orderStatus}</p>}
           <div className="customer-shortcuts">
             <Link to="/customer/dashboard/orders"><span>▤</span><strong>Order history</strong><small>See updates from your restaurants</small></Link>
             <Link to="/customer/dashboard/favorites"><span>♡</span><strong>Your favorites</strong><small>Keep your go-to dishes close</small></Link>
@@ -679,7 +883,41 @@ function CustomerDashboard({ section = "discover" }) {
         </>
       )}
       {activeSection === "orders" && (
-        <EmptyState icon="▤" title="No orders yet" text="When you place an order request with a restaurant, its status and updates will appear here." />
+        ordersLoading ? (
+          <EmptyState icon="◷" title="Loading your orders" text="Fetching your submitted order requests." />
+        ) : ordersError ? (
+          <p className="auth-error" role="alert">{ordersError}</p>
+        ) : customerOrders.length === 0 ? (
+          <EmptyState icon="▤" title="No orders yet" text="Your submitted order requests and restaurant updates will appear here." />
+        ) : (
+          <div className="order-request-list">
+            {customerOrders.map((order) => (
+              <article className="portal-card order-request-card" key={order.id}>
+                <div className="card-title-row">
+                  <div>
+                    <h2>{order.restaurants?.name || "Restaurant order"}</h2>
+                    <p>Request {order.id.slice(0, 8).toUpperCase()} · {new Date(order.created_at).toLocaleString()}</p>
+                  </div>
+                  <span className={`status-pill status-${order.status}`}>{order.status.replaceAll("_", " ")}</span>
+                </div>
+                <ul className="order-cart-list">
+                  {order.items.map((item) => (
+                    <li key={item.id}>
+                      <span>{item.quantity} × {item.item_name}</span>
+                      <strong>{priceFormatter.format(Number(item.line_total))}</strong>
+                    </li>
+                  ))}
+                  <li className="order-cart-total"><span>Estimated subtotal</span><strong>{priceFormatter.format(Number(order.subtotal))}</strong></li>
+                </ul>
+                <p className="order-delivery-summary">Delivery to: {order.delivery_address} · Contact: {order.customer_phone}</p>
+                {order.customer_note && <p className="order-delivery-summary">Note: {order.customer_note}</p>}
+                {order.status === "submitted" && (
+                  <button className="secondary-button" type="button" onClick={() => cancelCustomerOrder(order.id)}>Cancel request</button>
+                )}
+              </article>
+            ))}
+          </div>
+        )
       )}
       {activeSection === "favorites" && (
         <EmptyState icon="♡" title="Your saved places will live here" text="Save a restaurant or dish from your local feed to find it quickly next time." />
@@ -733,6 +971,10 @@ function RestaurantDashboard({ section = "overview" }) {
   const [restaurantLoading, setRestaurantLoading] = useState(true);
   const [restaurantError, setRestaurantError] = useState("");
   const [menuItems, setMenuItems] = useState([]);
+  const [restaurantOrders, setRestaurantOrders] = useState([]);
+  const [orderInboxLoading, setOrderInboxLoading] = useState(section === "orders");
+  const [orderInboxError, setOrderInboxError] = useState("");
+  const [updatingOrderId, setUpdatingOrderId] = useState("");
   const [menuLoading, setMenuLoading] = useState(section === "menu");
   const [menuError, setMenuError] = useState("");
   const [dishName, setDishName] = useState("");
@@ -838,6 +1080,59 @@ function RestaurantDashboard({ section = "overview" }) {
     }
 
     loadMenu();
+    return () => {
+      active = false;
+    };
+  }, [restaurant?.id, section, supabase]);
+
+  useEffect(() => {
+    let active = true;
+    if (section !== "orders" || !restaurant?.id) return undefined;
+
+    async function loadRestaurantOrders() {
+      setOrderInboxLoading(true);
+      setOrderInboxError("");
+      const { data: orders, error } = await supabase
+        .from("order_requests")
+        .select("id, customer_name, customer_email, customer_phone, delivery_address, customer_note, subtotal, status, created_at")
+        .eq("restaurant_id", restaurant.id)
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      if (error) {
+        setOrderInboxError(error.message);
+        setOrderInboxLoading(false);
+        return;
+      }
+
+      const ids = (orders ?? []).map((order) => order.id);
+      if (ids.length) {
+        const { data: items, error: itemsError } = await supabase
+          .from("order_request_items")
+          .select("id, order_request_id, item_name, unit_price, quantity, line_total")
+          .in("order_request_id", ids);
+        if (!active) return;
+        if (itemsError) {
+          setOrderInboxError(itemsError.message);
+          setOrderInboxLoading(false);
+          return;
+        }
+        const itemsByOrder = new Map();
+        for (const item of items ?? []) {
+          const current = itemsByOrder.get(item.order_request_id) ?? [];
+          current.push(item);
+          itemsByOrder.set(item.order_request_id, current);
+        }
+        setRestaurantOrders((orders ?? []).map((order) => ({
+          ...order,
+          items: itemsByOrder.get(order.id) ?? [],
+        })));
+      } else {
+        setRestaurantOrders([]);
+      }
+      setOrderInboxLoading(false);
+    }
+
+    loadRestaurantOrders();
     return () => {
       active = false;
     };
@@ -1024,6 +1319,23 @@ function RestaurantDashboard({ section = "overview" }) {
     setSettingsStatus("Restaurant details have been saved.");
   }
 
+  async function updateRestaurantOrder(orderId, status) {
+    setUpdatingOrderId(orderId);
+    setOrderInboxError("");
+    const { error } = await supabase.rpc("update_order_request_status", {
+      target_order_id: orderId,
+      next_status: status,
+    });
+    if (error) {
+      setOrderInboxError(error.message);
+    } else {
+      setRestaurantOrders((current) => current.map((order) =>
+        order.id === orderId ? { ...order, status } : order,
+      ));
+    }
+    setUpdatingOrderId("");
+  }
+
   const headers = {
     overview: ["RESTAURANT WORKSPACE", "Good morning", "Here’s what’s happening with your restaurant today."],
     orders: ["ORDER MANAGEMENT", "Incoming orders", "Review customer requests and keep your team in sync."],
@@ -1056,13 +1368,76 @@ function RestaurantDashboard({ section = "overview" }) {
             <MetricCard label="Restaurant status" value={restaurant?.status ?? "—"} detail={restaurant?.location || "Complete your profile"} icon="◷" />
           </div>
           <div className="dashboard-section-heading"><div><h2>Today’s activity</h2><p>Order requests and menu updates at a glance.</p></div><Link className="text-arrow-link" to="/restaurant/dashboard/orders">View orders <span aria-hidden="true">→</span></Link></div>
-          <EmptyState icon="◷" title="Order requests aren’t enabled yet" text="Once customer ordering is connected, new requests will appear here." />
+          <section className="portal-card restaurant-order-callout">
+            <h2>Manage customer requests</h2>
+            <p>Review incoming requests in your order inbox, then contact customers to confirm payment and delivery.</p>
+            <Link className="hero-primary-button" to="/restaurant/dashboard/orders">Open order inbox <span aria-hidden="true">→</span></Link>
+          </section>
         </>
       )}
       {activeSection === "orders" && (
         <section className="portal-card">
-          <div className="card-title-row"><div><h2>Order inbox</h2><p>New requests, accepted orders, and recent activity.</p></div><span className="status-pill">{restaurant?.status === "approved" ? "Ready for orders" : "Pending review"}</span></div>
-          <EmptyState icon="▤" title="Order requests aren’t enabled yet" text={restaurant?.status === "approved" ? "Customer orders will appear here after order placement is connected." : "Your restaurant must be approved before it can receive customer requests."} />
+          <div className="card-title-row"><div><h2>Order inbox</h2><p>Requests submitted by customers. Confirm final price, payment, and delivery directly.</p></div><span className={`status-pill status-${restaurant?.status}`}>{restaurant?.status === "approved" ? "Accepting requests" : "Not public"}</span></div>
+          {orderInboxError && <p className="auth-error" role="alert">{orderInboxError}</p>}
+          {restaurant?.status !== "approved" ? (
+            <EmptyState icon="◷" title="Your restaurant is not approved yet" text="You can review existing requests, but customers can only submit orders to approved restaurants." />
+          ) : orderInboxLoading ? (
+            <EmptyState icon="◷" title="Loading requests" text="Checking for customer orders." />
+          ) : restaurantOrders.length === 0 ? (
+            <EmptyState icon="▤" title="No order requests yet" text="Customer requests will show up here." />
+          ) : (
+            <div className="order-request-list">
+              {restaurantOrders.map((order) => {
+                const nextStatus = {
+                  submitted: ["accepted", "rejected"],
+                  accepted: ["preparing"],
+                  preparing: ["ready"],
+                  ready: ["completed"],
+                }[order.status] ?? [];
+                const whatsappNumber = getWhatsAppNumber(order.customer_phone);
+                const whatsappMessage = encodeURIComponent(`Hi ${order.customer_name}, this is ${restaurant?.name} regarding your QuickCrave order request ${order.id.slice(0, 8).toUpperCase()}.`);
+                return (
+                  <article className="restaurant-order-card" key={order.id}>
+                    <div className="card-title-row">
+                      <div>
+                        <h3>{order.customer_name} · {order.id.slice(0, 8).toUpperCase()}</h3>
+                        <p>{new Date(order.created_at).toLocaleString()}</p>
+                      </div>
+                      <span className={`status-pill status-${order.status}`}>{order.status.replaceAll("_", " ")}</span>
+                    </div>
+                    <ul className="order-cart-list">
+                      {order.items.map((item) => (
+                        <li key={item.id}>
+                          <span>{item.quantity} × {item.item_name}</span>
+                          <strong>{priceFormatter.format(Number(item.line_total))}</strong>
+                        </li>
+                      ))}
+                      <li className="order-cart-total"><span>Estimated subtotal</span><strong>{priceFormatter.format(Number(order.subtotal))}</strong></li>
+                    </ul>
+                    <p className="order-delivery-summary"><strong>Delivery address:</strong> {order.delivery_address}</p>
+                    <p className="order-delivery-summary"><strong>Customer phone:</strong> {order.customer_phone} · <a href={`mailto:${encodeURIComponent(order.customer_email)}`}>{order.customer_email}</a></p>
+                    {order.customer_note && <p className="order-delivery-summary"><strong>Customer note:</strong> {order.customer_note}</p>}
+                    <div className="admin-restaurant-actions">
+                      {whatsappNumber && (
+                        <a className="secondary-button" href={`https://wa.me/${whatsappNumber}?text=${whatsappMessage}`} target="_blank" rel="noopener noreferrer">Contact on WhatsApp</a>
+                      )}
+                      {nextStatus.map((status) => (
+                        <button
+                          className={status === "rejected" ? "secondary-button" : "hero-primary-button"}
+                          type="button"
+                          key={status}
+                          disabled={updatingOrderId === order.id}
+                          onClick={() => updateRestaurantOrder(order.id, status)}
+                        >
+                          {updatingOrderId === order.id ? "Saving…" : status === "accepted" ? "Accept request" : status === "rejected" ? "Reject" : status === "preparing" ? "Start preparing" : status === "ready" ? "Mark ready" : "Mark completed"}
+                        </button>
+                      ))}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
       )}
       {activeSection === "menu" && (

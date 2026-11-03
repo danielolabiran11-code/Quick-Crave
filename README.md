@@ -20,7 +20,10 @@ QuickCrave is a React and JavaScript frontend for a neighborhood restaurant mark
    VITE_SUPABASE_ANON_KEY=your-publishable-or-anon-key
    ```
 
-4. Run `supabase/migrations/20261102090000_initial_marketplace.sql`, then `supabase/migrations/20261103000000_admin_dashboard_and_signup_controls.sql` in the Supabase SQL Editor.
+4. Run these files in the Supabase SQL Editor in order:
+   - `supabase/migrations/20261102090000_initial_marketplace.sql`
+   - `supabase/migrations/20261103000000_admin_dashboard_and_signup_controls.sql`
+   - `supabase/migrations/20261103010000_order_requests.sql`
 5. In **Authentication → URL Configuration**, set the local site URL to `http://localhost:5173` and allow the customer and restaurant login URLs as redirects. Keep email confirmation enabled: restaurant owners still need to confirm their email; customer signup is confirmed by the server-side function.
 6. Restart Vite after changing environment variables.
 
@@ -86,6 +89,7 @@ npm run preview
 | `/admin/login` | Private administrator sign-in; there is no public admin registration. |
 | `/admin/dashboard` | Review restaurant applications and manage approval status. |
 | `/customer/dashboard` | Approved restaurant discovery feed. |
+| `/customer/dashboard/orders` | Submit order requests and track their restaurant status. |
 | `/customer/dashboard/profile` | Edit customer name, phone, and delivery address. |
 | `/restaurant/dashboard` | Restaurant workspace and approval status. |
 | `/restaurant/dashboard/menu` | Add, edit, remove, and mark menu items available/unavailable; upload menu photos. |
@@ -95,10 +99,10 @@ npm run preview
 
 The migrations use RLS so users can only read/update their own profile, restaurant members can access their restaurant workspace, and only restaurant owners can change restaurant settings or menus. Restaurant email, phone, and WhatsApp details are stored separately from the public restaurant profile and are readable only by restaurant members and administrators. New restaurants start as `pending`; owners cannot change the approval status. Only approved restaurants and available menu items are returned to public visitors. Menu photos are restricted by file type and size and owner-scoped for uploads.
 
-Restaurant registration creates a pending restaurant profile and owner membership through a database trigger. Review and approval are available only in the private admin dashboard and are not exposed to restaurant accounts.
+Restaurant registration creates a pending restaurant profile and owner membership through a database trigger. Review and approval are available only in the private admin dashboard and are not exposed to restaurant accounts. Order requests snapshot customer contact, delivery, item, and price details; only the customer and that restaurant's members can read them. The database validates menu availability and calculates prices, and status changes use restricted RPC functions.
 
 ## Current scope
 
 Supabase configuration and both migrations are required for account, profile, restaurant, and menu data. Customer signup also requires deploying the `customer-signup` Edge Function and configuring its allowed origins. Without these backend pieces, signup and dashboard operations will report setup errors.
 
-Restaurant approval and account onboarding are implemented. Order-request storage, customer order placement/status, staff invitations and roles, password recovery, email/WhatsApp notifications, delivery workflows, and menu dietary/allergen fields are not implemented yet. Do not accept real orders until those flows and their operational policies are in place.
+Restaurant approval, account onboarding, and order requests are implemented. Customers can request items from one approved restaurant at a time; requests are not paid online or automatically confirmed. Restaurant members can update request status and contact customers directly, including by opening a prefilled WhatsApp message. Automatic email/WhatsApp order notifications, staff invitations and roles, password recovery, delivery workflows, and menu dietary/allergen fields are not implemented yet. Configure and apply all three database migrations before using order requests.
