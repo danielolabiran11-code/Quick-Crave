@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./lib/AuthContext.jsx";
+import LoadingIndicator from "./LoadingIndicator.jsx";
 
 const priceFormatter = new Intl.NumberFormat("en-NG", {
   style: "currency",
@@ -63,6 +64,7 @@ function HomeLink({ label }) {
 function PortalFrame({ children, audience = "customer" }) {
   const { user, supabase } = useAuth();
   const [signOutError, setSignOutError] = useState("");
+  const [signingOut, setSigningOut] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const isRestaurant = audience === "restaurant";
   const links = isRestaurant
@@ -100,12 +102,21 @@ function PortalFrame({ children, audience = "customer" }) {
           <button
             className="portal-signout"
             type="button"
+            disabled={signingOut}
             onClick={async () => {
-              const { error } = await supabase.auth.signOut();
-              if (error) setSignOutError(error.message);
+              setSigningOut(true);
+              setSignOutError("");
+              try {
+                const { error } = await supabase.auth.signOut();
+                if (error) setSignOutError(error.message);
+              } catch (error) {
+                setSignOutError(error.message || "Couldn’t sign out.");
+              } finally {
+                setSigningOut(false);
+              }
             }}
           >
-            Sign out
+            {signingOut ? <LoadingIndicator label="Signing out" /> : "Sign out"}
           </button>
           <HomeLink label="Visit homepage" />
           <button
@@ -267,7 +278,9 @@ export function ProtectedRoute({ audience, children }) {
       </main>
     );
   }
-  if (loading || access.checking) return <div className="route-loading" role="status">Checking your account…</div>;
+  if (loading || access.checking) {
+    return <div className="route-loading"><LoadingIndicator label="Checking your account" centered /></div>;
+  }
   if (!user) {
     return <Navigate to={`/${audience}/login`} replace state={{ from: window.location.pathname }} />;
   }
@@ -494,7 +507,7 @@ export function AuthPage({ audience, mode }) {
           {isPasswordReset && !configured ? (
             <p className="auth-availability" role="alert">Password reset services aren’t configured yet. Add the Supabase environment variables to enable this form.</p>
           ) : isPasswordReset && resetSession === "checking" ? (
-            <p role="status">Verifying your password reset link…</p>
+            <LoadingIndicator label="Verifying your password reset link" />
           ) : isPasswordReset && resetSession === "invalid" ? (
             <div className="auth-notice" role="alert">
               This password reset link is invalid or expired. Request a new one from the sign-in page.
@@ -573,8 +586,19 @@ export function AuthPage({ audience, mode }) {
               </label>
             )}
             <button className="hero-primary-button auth-submit" type="submit" disabled={!configured || busy}>
-              {busy
-                ? "Please wait…"
+              {busy ? (
+                <LoadingIndicator
+                  label={
+                    isSignup
+                      ? "Creating account"
+                      : isRecovery
+                        ? "Sending reset link"
+                        : isPasswordReset
+                          ? "Updating password"
+                          : "Signing in"
+                  }
+                />
+              )
                 : isSignup
                   ? "Create account"
                   : isRecovery
@@ -644,6 +668,9 @@ function CustomerDashboard({ section = "discover" }) {
   const [orderError, setOrderError] = useState("");
   const [orderStatus, setOrderStatus] = useState("");
   const [orderSubmitting, setOrderSubmitting] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [emailUpdating, setEmailUpdating] = useState(false);
+  const [passwordUpdating, setPasswordUpdating] = useState(false);
   const [orderNote, setOrderNote] = useState("");
   const [customerOrders, setCustomerOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(section === "orders");
@@ -798,27 +825,41 @@ function CustomerDashboard({ section = "discover" }) {
     event.preventDefault();
     setProfileStatus("");
     setProfileError("");
-    const { error } = await supabase
-      .from("profiles")
-      .update(profile)
-      .eq("id", user.id);
-    if (error) {
-      setProfileError(error.message);
-      return;
+    setProfileSaving(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update(profile)
+        .eq("id", user.id);
+      if (error) {
+        setProfileError(error.message);
+        return;
+      }
+      setProfileStatus("Your contact details have been saved.");
+    } catch (error) {
+      setProfileError(error.message || "Couldn’t save your contact details.");
+    } finally {
+      setProfileSaving(false);
     }
-    setProfileStatus("Your contact details have been saved.");
   }
 
   async function updateAccountEmail(event) {
     event.preventDefault();
     setEmailStatus("");
     setEmailError("");
-    const { error } = await supabase.auth.updateUser({ email: accountEmail.trim() });
-    if (error) {
-      setEmailError(error.message);
-      return;
+    setEmailUpdating(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ email: accountEmail.trim() });
+      if (error) {
+        setEmailError(error.message);
+        return;
+      }
+      setEmailStatus("Confirm the email change using the link sent to your new address.");
+    } catch (error) {
+      setEmailError(error.message || "Couldn’t update your account email.");
+    } finally {
+      setEmailUpdating(false);
     }
-    setEmailStatus("Confirm the email change using the link sent to your new address.");
   }
 
   async function updateAccountPassword(event) {
@@ -829,14 +870,21 @@ function CustomerDashboard({ section = "discover" }) {
       setPasswordError("The password entries don’t match.");
       return;
     }
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) {
-      setPasswordError(error.message);
-      return;
+    setPasswordUpdating(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        setPasswordError(error.message);
+        return;
+      }
+      setPasswordStatus("Your password has been updated.");
+      setNewPassword("");
+      setPasswordConfirmation("");
+    } catch (error) {
+      setPasswordError(error.message || "Couldn’t update your password.");
+    } finally {
+      setPasswordUpdating(false);
     }
-    setPasswordStatus("Your password has been updated.");
-    setNewPassword("");
-    setPasswordConfirmation("");
   }
 
   function addToOrder(item, restaurantId) {
@@ -887,39 +935,47 @@ function CustomerDashboard({ section = "discover" }) {
       return;
     }
     setOrderSubmitting(true);
-    const { data, error } = await supabase.rpc("create_order_request", {
-      target_restaurant_id: cartRestaurantId,
-      requested_items: orderCart.map((item) => ({ id: item.id, quantity: item.quantity })),
-      delivery_address: profile.delivery_address,
-      customer_phone: profile.phone,
-      customer_note: orderNote,
-    });
-    if (error) {
+    try {
+      const { data, error } = await supabase.rpc("create_order_request", {
+        target_restaurant_id: cartRestaurantId,
+        requested_items: orderCart.map((item) => ({ id: item.id, quantity: item.quantity })),
+        delivery_address: profile.delivery_address,
+        customer_phone: profile.phone,
+        customer_note: orderNote,
+      });
+      if (error) {
+        setOrderError(error.message);
+        return;
+      }
+      clearOrderCart();
+      setOrderNote("");
+      setOrderStatus(`Order request ${String(data).slice(0, 8).toUpperCase()} was sent to the restaurant. They’ll contact you to confirm availability, payment, and delivery.`);
+    } catch (error) {
+      setOrderError(error.message || "Couldn’t send your order request.");
+    } finally {
       setOrderSubmitting(false);
-      setOrderError(error.message);
-      return;
     }
-    clearOrderCart();
-    setOrderNote("");
-    setOrderStatus(`Order request ${String(data).slice(0, 8).toUpperCase()} was sent to the restaurant. They’ll contact you to confirm availability, payment, and delivery.`);
-    setOrderSubmitting(false);
   }
 
   async function cancelCustomerOrder(orderId) {
     setCancellingOrderId(orderId);
     setOrdersError("");
-    const { error } = await supabase.rpc("cancel_order_request", {
-      target_order_id: orderId,
-    });
-    if (error) {
-      setOrdersError(error.message);
+    try {
+      const { error } = await supabase.rpc("cancel_order_request", {
+        target_order_id: orderId,
+      });
+      if (error) {
+        setOrdersError(error.message);
+        return;
+      }
+      setCustomerOrders((current) => current.map((order) =>
+        order.id === orderId ? { ...order, status: "cancelled" } : order,
+      ));
+    } catch (error) {
+      setOrdersError(error.message || "Couldn’t cancel this request.");
+    } finally {
       setCancellingOrderId("");
-      return;
     }
-    setCustomerOrders((current) => current.map((order) =>
-      order.id === orderId ? { ...order, status: "cancelled" } : order,
-    ));
-    setCancellingOrderId("");
   }
 
   const visibleRestaurants = restaurants.filter((restaurant) => {
@@ -1087,8 +1143,9 @@ function CustomerDashboard({ section = "discover" }) {
               </div>
               {orderError && <p className="auth-error" role="alert">{orderError}</p>}
               <button className="hero-primary-button profile-save" type="submit" disabled={orderSubmitting}>
-                {orderSubmitting ? "Sending request…" : "Send order request"}
-                <span aria-hidden="true">→</span>
+                {orderSubmitting
+                  ? <LoadingIndicator label="Sending request" />
+                  : <>Send order request <span aria-hidden="true">→</span></>}
               </button>
               <p className="order-request-disclaimer">This is a request, not a confirmed order. The restaurant will contact you about availability, final cost, payment, and delivery.</p>
             </form>
@@ -1146,7 +1203,9 @@ function CustomerDashboard({ section = "discover" }) {
                     disabled={cancellingOrderId === order.id}
                     onClick={() => cancelCustomerOrder(order.id)}
                   >
-                    {cancellingOrderId === order.id ? "Cancelling…" : "Cancel request"}
+                    {cancellingOrderId === order.id
+                      ? <LoadingIndicator label="Cancelling request" />
+                      : "Cancel request"}
                   </button>
                 )}
               </article>
@@ -1166,21 +1225,27 @@ function CustomerDashboard({ section = "discover" }) {
         <>
           <form className="portal-card profile-form" onSubmit={saveCustomerProfile}>
             <div className="card-title-row"><div><h2>Your contact details</h2><p>Use details the restaurant can use to confirm an order request.</p></div></div>
-            {profileLoading && <p role="status">Loading your saved details…</p>}
+            {profileLoading && <LoadingIndicator label="Loading your saved details" />}
             {profileError && <p className="auth-error" role="alert">{profileError}</p>}
             <div className="profile-fields">
               <label>Full name<input name="full_name" autoComplete="name" value={profile.full_name} onChange={(event) => setProfile({ ...profile, full_name: event.target.value })} /></label>
               <label>Phone number<input name="phone" type="tel" autoComplete="tel" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} /></label>
               <label className="profile-address-field">Delivery address<input name="delivery_address" autoComplete="street-address" value={profile.delivery_address} onChange={(event) => setProfile({ ...profile, delivery_address: event.target.value })} /></label>
             </div>
-            <button className="hero-primary-button profile-save" type="submit" disabled={profileLoading}>Save changes <span aria-hidden="true">→</span></button>
+            <button className="hero-primary-button profile-save" type="submit" disabled={profileLoading || profileSaving}>
+              {profileSaving
+                ? <LoadingIndicator label="Saving your details" />
+                : <>Save changes <span aria-hidden="true">→</span></>}
+            </button>
             {profileStatus && <p className="profile-status" role="status">{profileStatus}</p>}
           </form>
           <form className="portal-card account-security-card" onSubmit={updateAccountEmail}>
             <div className="card-title-row"><div><h2>Account email</h2><p>Changing your sign-in email requires confirmation.</p></div></div>
             <div className="account-email-row">
               <label>Email address<input type="email" autoComplete="email" value={accountEmail} onChange={(event) => setAccountEmail(event.target.value)} required /></label>
-              <button className="secondary-button" type="submit" disabled={accountEmail.trim() === user.email}>Update email</button>
+              <button className="secondary-button" type="submit" disabled={accountEmail.trim() === user.email || emailUpdating}>
+                {emailUpdating ? <LoadingIndicator label="Updating email" /> : "Update email"}
+              </button>
             </div>
             {emailError && <p className="auth-error" role="alert">{emailError}</p>}
             {emailStatus && <p className="profile-status" role="status">{emailStatus}</p>}
@@ -1194,7 +1259,9 @@ function CustomerDashboard({ section = "discover" }) {
               <label>New password<input type="password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required /></label>
               <label>Confirm new password<input type="password" autoComplete="new-password" minLength={8} value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} required /></label>
             </div>
-            <button className="secondary-button security-save" type="submit">Update password</button>
+            <button className="secondary-button security-save" type="submit" disabled={passwordUpdating}>
+              {passwordUpdating ? <LoadingIndicator label="Updating password" /> : "Update password"}
+            </button>
             {passwordError && <p className="auth-error" role="alert">{passwordError}</p>}
             {passwordStatus && <p className="profile-status" role="status">{passwordStatus}</p>}
           </form>
@@ -1217,6 +1284,8 @@ function RestaurantDashboard({ section = "overview" }) {
   const [orderInboxError, setOrderInboxError] = useState("");
   const [updatingOrderId, setUpdatingOrderId] = useState("");
   const [menuLoading, setMenuLoading] = useState(section === "menu" || section === "overview");
+  const [menuSaving, setMenuSaving] = useState(false);
+  const [menuActionId, setMenuActionId] = useState("");
   const [menuError, setMenuError] = useState("");
   const [dishName, setDishName] = useState("");
   const [dishDescription, setDishDescription] = useState("");
@@ -1226,6 +1295,7 @@ function RestaurantDashboard({ section = "overview" }) {
   const [editingItemId, setEditingItemId] = useState("");
   const [settingsStatus, setSettingsStatus] = useState("");
   const [settingsError, setSettingsError] = useState("");
+  const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsForm, setSettingsForm] = useState({
     name: "",
     contact_email: "",
@@ -1384,6 +1454,17 @@ function RestaurantDashboard({ section = "overview" }) {
   }, [restaurant?.id, section, supabase, workspaceReloadKey]);
 
   async function addMenuItem(event) {
+    setMenuSaving(true);
+    try {
+      await persistMenuItem(event);
+    } catch (error) {
+      setMenuError(error.message || "Couldn’t save this menu item.");
+    } finally {
+      setMenuSaving(false);
+    }
+  }
+
+  async function persistMenuItem(event) {
     event.preventDefault();
     setMenuError("");
     const itemFields = {
@@ -1496,38 +1577,63 @@ function RestaurantDashboard({ section = "overview" }) {
 
   async function updateMenuAvailability(item) {
     setMenuError("");
-    const { data, error } = await supabase
-      .from("menu_items")
-      .update({ is_available: !item.is_available })
-      .eq("id", item.id)
-      .select("id, name, description, category, price, is_available")
-      .single();
-    if (error) {
-      setMenuError(error.message);
-      return;
+    setMenuActionId(item.id);
+    try {
+      const { data, error } = await supabase
+        .from("menu_items")
+        .update({ is_available: !item.is_available })
+        .eq("id", item.id)
+        .select("id, name, description, category, price, is_available, image_url")
+        .single();
+      if (error) {
+        setMenuError(error.message);
+        return;
+      }
+      setMenuItems((current) => current.map((entry) => entry.id === item.id ? data : entry));
+    } catch (error) {
+      setMenuError(error.message || "Couldn’t update menu availability.");
+    } finally {
+      setMenuActionId("");
     }
-    setMenuItems((current) => current.map((entry) => entry.id === item.id ? data : entry));
   }
 
   async function deleteMenuItem(id) {
     setMenuError("");
     const item = menuItems.find((entry) => entry.id === id);
-    const { error } = await supabase.from("menu_items").delete().eq("id", id);
-    if (error) {
-      setMenuError(error.message);
-      return;
-    }
-    setMenuItems((current) => current.filter((entry) => entry.id !== id));
-    if (item?.image_url) {
-      const { error: cleanupError } = await removeMenuImageIfUnused(supabase, item.image_url);
-      if (cleanupError) {
-        setMenuError(`Menu item was removed, but its photo could not be safely deleted: ${cleanupError.message}`);
+    setMenuActionId(id);
+    try {
+      const { error } = await supabase.from("menu_items").delete().eq("id", id);
+      if (error) {
+        setMenuError(error.message);
+        return;
       }
+      setMenuItems((current) => current.filter((entry) => entry.id !== id));
+      if (item?.image_url) {
+        const { error: cleanupError } = await removeMenuImageIfUnused(supabase, item.image_url);
+        if (cleanupError) {
+          setMenuError(`Menu item was removed, but its photo could not be safely deleted: ${cleanupError.message}`);
+        }
+      }
+    } catch (error) {
+      setMenuError(error.message || "Couldn’t remove this menu item.");
+    } finally {
+      setMenuActionId("");
     }
   }
 
   async function saveRestaurantSettings(event) {
     event.preventDefault();
+    setSettingsSaving(true);
+    try {
+      await persistRestaurantSettings();
+    } catch (error) {
+      setSettingsError(error.message || "Couldn’t save restaurant details.");
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
+
+  async function persistRestaurantSettings() {
     setSettingsStatus("");
     setSettingsError("");
     const { data, error } = await supabase
@@ -1565,18 +1671,23 @@ function RestaurantDashboard({ section = "overview" }) {
   async function updateRestaurantOrder(orderId, status) {
     setUpdatingOrderId(orderId);
     setOrderInboxError("");
-    const { error } = await supabase.rpc("update_order_request_status", {
-      target_order_id: orderId,
-      next_status: status,
-    });
-    if (error) {
-      setOrderInboxError(error.message);
-    } else {
-      setRestaurantOrders((current) => current.map((order) =>
-        order.id === orderId ? { ...order, status } : order,
-      ));
+    try {
+      const { error } = await supabase.rpc("update_order_request_status", {
+        target_order_id: orderId,
+        next_status: status,
+      });
+      if (error) {
+        setOrderInboxError(error.message);
+      } else {
+        setRestaurantOrders((current) => current.map((order) =>
+          order.id === orderId ? { ...order, status } : order,
+        ));
+      }
+    } catch (error) {
+      setOrderInboxError(error.message || "Couldn’t update this order request.");
+    } finally {
+      setUpdatingOrderId("");
     }
-    setUpdatingOrderId("");
   }
 
   const headers = {
@@ -1590,7 +1701,7 @@ function RestaurantDashboard({ section = "overview" }) {
 
   return (
     <PortalFrame audience="restaurant">
-      {restaurantLoading && <ServiceStatus>Loading your restaurant workspace…</ServiceStatus>}
+      {restaurantLoading && <ServiceStatus><LoadingIndicator label="Loading your restaurant workspace" /></ServiceStatus>}
       {restaurantError && (
         <div className="dashboard-error" role="alert">
           <p>{restaurantError}</p>
@@ -1687,7 +1798,7 @@ function RestaurantDashboard({ section = "overview" }) {
                           disabled={updatingOrderId === order.id}
                           onClick={() => updateRestaurantOrder(order.id, "accepted")}
                         >
-                          {updatingOrderId === order.id ? "Accepting…" : "Accept request"}
+                          {updatingOrderId === order.id ? <LoadingIndicator label="Accepting request" /> : "Accept request"}
                         </button>
                       </div>
                     </article>
@@ -1766,7 +1877,9 @@ function RestaurantDashboard({ section = "overview" }) {
                           disabled={updatingOrderId === order.id}
                           onClick={() => updateRestaurantOrder(order.id, status)}
                         >
-                          {updatingOrderId === order.id ? "Saving…" : status === "accepted" ? "Accept request" : status === "rejected" ? "Reject" : status === "preparing" ? "Start preparing" : status === "ready" ? "Mark ready" : "Mark completed"}
+                          {updatingOrderId === order.id
+                            ? <LoadingIndicator label="Updating order" />
+                            : status === "accepted" ? "Accept request" : status === "rejected" ? "Reject" : status === "preparing" ? "Start preparing" : status === "ready" ? "Mark ready" : "Mark completed"}
                         </button>
                       ))}
                     </div>
@@ -1797,8 +1910,10 @@ function RestaurantDashboard({ section = "overview" }) {
                 setMenuError("");
                 setDishImage(file);
               }} /></label>
-              <button className="hero-primary-button" type="submit" disabled={restaurantRole !== "owner" || restaurantLoading}>{editingItemId ? "Save changes" : "Add item"} <span aria-hidden="true">{editingItemId ? "→" : "+"}</span></button>
-              {editingItemId && <button className="menu-cancel-button" type="button" onClick={resetMenuForm}>Cancel</button>}
+              <button className="hero-primary-button" type="submit" disabled={restaurantRole !== "owner" || restaurantLoading || menuSaving}>
+                {menuSaving ? <LoadingIndicator label={editingItemId ? "Saving changes" : "Adding item"} /> : <>{editingItemId ? "Save changes" : "Add item"} <span aria-hidden="true">{editingItemId ? "→" : "+"}</span></>}
+              </button>
+              {editingItemId && <button className="menu-cancel-button" type="button" disabled={menuSaving} onClick={resetMenuForm}>Cancel</button>}
             </form>
             <p className="editor-warning">Photos: JPEG, PNG, or WebP up to 5 MB. Dietary and allergen fields are coming soon.</p>
           </section>
@@ -1820,9 +1935,13 @@ function RestaurantDashboard({ section = "overview" }) {
                     <span>{item.image_url && <img className="menu-item-thumbnail" src={item.image_url} alt="" />}<strong>{item.name}</strong><small>{item.category}{item.description ? ` · ${item.description}` : ""}</small></span>
                     <strong>{priceFormatter.format(Number(item.price))}</strong>
                     <span className="menu-item-actions">
-                      <button type="button" disabled={restaurantRole !== "owner"} onClick={() => updateMenuAvailability(item)}>{item.is_available ? "Available" : "Unavailable"}</button>
-                      <button type="button" disabled={restaurantRole !== "owner"} onClick={() => beginEditMenuItem(item)}>Edit</button>
-                      <button type="button" disabled={restaurantRole !== "owner"} onClick={() => deleteMenuItem(item.id)}>Remove</button>
+                      <button type="button" disabled={restaurantRole !== "owner" || Boolean(menuActionId)} onClick={() => updateMenuAvailability(item)}>
+                        {menuActionId === item.id ? <LoadingIndicator label="Updating availability" /> : item.is_available ? "Available" : "Unavailable"}
+                      </button>
+                      <button type="button" disabled={restaurantRole !== "owner" || Boolean(menuActionId) || menuSaving} onClick={() => beginEditMenuItem(item)}>Edit</button>
+                      <button type="button" disabled={restaurantRole !== "owner" || Boolean(menuActionId)} onClick={() => deleteMenuItem(item.id)}>
+                        {menuActionId === item.id ? <LoadingIndicator label="Removing item" /> : "Remove"}
+                      </button>
                     </span>
                   </li>
                 ))}
@@ -1837,7 +1956,7 @@ function RestaurantDashboard({ section = "overview" }) {
           onSubmit={saveRestaurantSettings}
         >
           <div className="card-title-row"><div><h2>Restaurant details</h2><p>Keep your public profile and contact channels current.</p></div></div>
-          {restaurantLoading && <p role="status">Loading restaurant details…</p>}
+          {restaurantLoading && <LoadingIndicator label="Loading restaurant details" />}
           {settingsError && <p className="auth-error" role="alert">{settingsError}</p>}
           {restaurant?.status !== "approved" && <p className="editor-warning">Your restaurant is not public until QuickCrave approves its profile.</p>}
           <div className="profile-fields">
@@ -1848,7 +1967,9 @@ function RestaurantDashboard({ section = "overview" }) {
             <label>Neighborhood or city<input name="location" value={settingsForm.location} onChange={(event) => setSettingsForm({ ...settingsForm, location: event.target.value })} required /></label>
             <label>Opening hours<input name="opening_hours" value={settingsForm.opening_hours} onChange={(event) => setSettingsForm({ ...settingsForm, opening_hours: event.target.value })} /></label>
           </div>
-          <button className="hero-primary-button profile-save" type="submit" disabled={restaurantLoading || restaurantRole !== "owner"}>Save changes <span aria-hidden="true">→</span></button>
+          <button className="hero-primary-button profile-save" type="submit" disabled={restaurantLoading || restaurantRole !== "owner" || settingsSaving}>
+            {settingsSaving ? <LoadingIndicator label="Saving restaurant details" /> : <>Save changes <span aria-hidden="true">→</span></>}
+          </button>
           {settingsStatus && <p className="profile-status" role="status">{settingsStatus}</p>}
           <div className="settings-checklist">
             <span>Staff access and invitations <span className="status-pill">Coming soon</span></span>
@@ -1983,21 +2104,26 @@ function AdminDashboard() {
     setUpdatingId(restaurant.id);
     setError("");
     setStatusMessage("");
-    const { data, error: updateError } = await supabase
-      .from("restaurants")
-      .update({ status })
-      .eq("id", restaurant.id)
-      .select("id, status")
-      .single();
-    if (updateError) {
-      setError(updateError.message);
-    } else {
-      setRestaurants((current) => current.map((item) =>
-        item.id === data.id ? { ...item, status: data.status } : item,
-      ));
-      setStatusMessage(`${restaurant.name} is now ${status}.`);
+    try {
+      const { data, error: updateError } = await supabase
+        .from("restaurants")
+        .update({ status })
+        .eq("id", restaurant.id)
+        .select("id, status")
+        .single();
+      if (updateError) {
+        setError(updateError.message);
+      } else {
+        setRestaurants((current) => current.map((item) =>
+          item.id === data.id ? { ...item, status: data.status } : item,
+        ));
+        setStatusMessage(`${restaurant.name} is now ${status}.`);
+      }
+    } catch (updateError) {
+      setError(updateError.message || "Couldn’t update restaurant status.");
+    } finally {
+      setUpdatingId("");
     }
-    setUpdatingId("");
   }
 
   const visibleRestaurants = restaurants.filter((restaurant) => {
@@ -2020,7 +2146,9 @@ function AdminDashboard() {
         eyebrow="MARKETPLACE ADMINISTRATION"
         title="Restaurant review"
         description="Review restaurant registrations and manage their marketplace approval."
-        action={<span className="status-pill">{loading ? "Loading applications…" : loadError ? "Unavailable" : `${pendingCount} pending`}</span>}
+        action={loading
+          ? <LoadingIndicator label="Loading applications" />
+          : <span className="status-pill">{loadError ? "Unavailable" : `${pendingCount} pending`}</span>}
       />
       {error && (
         <div className="dashboard-error" role="alert">
@@ -2111,7 +2239,7 @@ function AdminDashboard() {
                       disabled={updatingId === restaurant.id}
                       onClick={() => updateRestaurantStatus(restaurant, "approved")}
                     >
-                      {updatingId === restaurant.id ? "Saving…" : "Approve"}
+                      {updatingId === restaurant.id ? <LoadingIndicator label="Saving restaurant status" /> : "Approve"}
                     </button>
                   )}
                   {restaurant.status === "pending" && (
@@ -2121,7 +2249,7 @@ function AdminDashboard() {
                       disabled={updatingId === restaurant.id}
                       onClick={() => updateRestaurantStatus(restaurant, "rejected")}
                     >
-                      Reject
+                      {updatingId === restaurant.id ? <LoadingIndicator label="Saving restaurant status" /> : "Reject"}
                     </button>
                   )}
                   {restaurant.status === "approved" && (
@@ -2131,7 +2259,7 @@ function AdminDashboard() {
                       disabled={updatingId === restaurant.id}
                       onClick={() => updateRestaurantStatus(restaurant, "suspended")}
                     >
-                      Suspend
+                      {updatingId === restaurant.id ? <LoadingIndicator label="Saving restaurant status" /> : "Suspend"}
                     </button>
                   )}
                 </div>
@@ -2157,8 +2285,8 @@ function EmptyState({ icon, title, text, action }) {
 
 function LoadingState({ label, rows = 1 }) {
   return (
-    <div className="loading-state" role="status" aria-label={label}>
-      <span className="loading-state-label">{label}…</span>
+    <div className="loading-state" aria-busy="true">
+      <LoadingIndicator label={label} />
       {Array.from({ length: rows }, (_, index) => (
         <span className="loading-state-row" key={index} />
       ))}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Route, Routes } from "react-router-dom";
 import { isSupabaseConfigured, supabase } from "./lib/supabase.js";
+import LoadingIndicator from "./LoadingIndicator.jsx";
 import {
   AccountChoicePage,
   AdminDashboardPage,
@@ -339,7 +340,9 @@ function LandingPage() {
             </p>
             <div className="dish-grid" id="dish-grid" aria-live="polite">
               {menuLoading ? (
-                <p className="public-menu-state" role="status">Loading restaurant menus…</p>
+                <p className="public-menu-state">
+                  <LoadingIndicator label="Loading restaurant menus" centered />
+                </p>
               ) : menuError ? (
                 <p className="public-menu-state" role="alert">Couldn’t load restaurant menus: {menuError}</p>
               ) : visibleDishes.length === 0 ? (
