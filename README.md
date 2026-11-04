@@ -24,7 +24,10 @@ QuickCrave is a React and JavaScript frontend for a neighborhood restaurant mark
    - `supabase/migrations/20261102090000_initial_marketplace.sql`
    - `supabase/migrations/20261103000000_admin_dashboard_and_signup_controls.sql`
    - `supabase/migrations/20261103010000_order_requests.sql`
-5. In **Authentication → URL Configuration**, set the local site URL to `http://localhost:5173` and allow the customer and restaurant login URLs as redirects. Keep email confirmation enabled: restaurant owners still need to confirm their email; customer signup is confirmed by the server-side function.
+   - `supabase/migrations/20261104120000_order_item_images_and_admin_menu_preview.sql`
+5. In **Authentication → URL Configuration**, set your Site URL to your production Vercel URL and add the reset pages to the Redirect URLs allowlist. Add the full URLs for your app, such as `https://your-project.vercel.app/customer/reset-password`, `https://your-project.vercel.app/restaurant/reset-password`, and `https://your-project.vercel.app/admin/reset-password`. For local testing, add the same paths on `http://localhost:5173`.
+
+   Keep email confirmation enabled: restaurant owners still need to confirm their email; customer signup is confirmed by the server-side function. Password reset links use Supabase Auth email and are subject to Supabase's default email delivery limits and settings; sending reliably to all customers may require configuring custom SMTP.
 6. Restart Vite after changing environment variables.
 
 ## Customer signup function
@@ -46,6 +49,15 @@ https://quick-crave-ten.vercel.app,http://localhost:5173
 ```
 
 Add any Vercel preview/custom domains you use. The function must be redeployed after code changes. It relies on Supabase's server-side `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` function secrets; do not expose them to the client.
+
+## Features coming soon
+
+These features are not available yet and are marked **Coming soon** in the relevant dashboard:
+
+- Dietary and allergen information for menu items.
+- Staff invitations and team roles.
+- Delivery workflows beyond the current order-request status tracking.
+- Automatic email and WhatsApp order notifications. Automatic email notifications will need a verified sending domain and an email provider; WhatsApp automation will need a supported messaging integration. Restaurant members can still contact customers through the existing WhatsApp link.
 
 ## Administrator access
 
@@ -85,8 +97,11 @@ npm run preview
 | `/` | Public landing page and approved available restaurant menu items. |
 | `/account` | Choose customer or restaurant access. |
 | `/customer/login` and `/customer/signup` | Customer authentication. |
+| `/customer/forgot-password` and `/customer/reset-password` | Request a password reset email and set a new password. |
 | `/restaurant/login` and `/restaurant/signup` | Restaurant owner authentication and pending restaurant registration. |
+| `/restaurant/forgot-password` and `/restaurant/reset-password` | Request a password reset email and set a new password. |
 | `/admin/login` | Private administrator sign-in; there is no public admin registration. |
+| `/admin/forgot-password` and `/admin/reset-password` | Request a password reset email and set a new password. |
 | `/admin/dashboard` | Review restaurant applications and manage approval status. |
 | `/customer/dashboard` | Approved restaurant discovery feed. |
 | `/customer/dashboard/orders` | Submit order requests and track their restaurant status. |
@@ -103,6 +118,6 @@ Restaurant registration creates a pending restaurant profile and owner membershi
 
 ## Current scope
 
-Supabase configuration and both migrations are required for account, profile, restaurant, and menu data. Customer signup also requires deploying the `customer-signup` Edge Function and configuring its allowed origins. Without these backend pieces, signup and dashboard operations will report setup errors.
+Supabase configuration and all four migrations are required for account, profile, restaurant, menu, and order data. Customer signup requires deploying the `customer-signup` Edge Function and configuring its allowed origins. Password recovery uses Supabase Auth email and the reset redirect URLs must be allowlisted in Supabase Authentication settings. Apply the latest migration to save menu image URLs with order items and allow administrators to preview restaurant menus.
 
-Restaurant approval, account onboarding, and order requests are implemented. Customers can request items from one approved restaurant at a time; requests are not paid online or automatically confirmed. Restaurant members can update request status and contact customers directly, including by opening a prefilled WhatsApp message. Automatic email/WhatsApp order notifications, staff invitations and roles, password recovery, delivery workflows, and menu dietary/allergen fields are not implemented yet. Configure and apply all three database migrations before using order requests.
+Restaurant approval, account onboarding, order requests, and password recovery are implemented. Customers can request items from one approved restaurant at a time; requests are not paid online or automatically confirmed. Restaurant members can update request status and contact customers directly, including by opening a prefilled WhatsApp message. Dietary and allergen fields, staff invitations and roles, delivery workflows, and automatic email and WhatsApp notifications are coming soon. Configure and apply all four database migrations before using order requests.

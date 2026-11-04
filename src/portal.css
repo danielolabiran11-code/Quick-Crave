@@ -953,6 +953,74 @@
   flex: 0 0 auto;
 }
 
+.meal-thumbnail {
+  width: 52px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  object-fit: cover;
+  background: #f7eee4;
+}
+
+.meal-thumbnail-placeholder,
+.admin-menu-preview-item > span {
+  display: grid;
+  place-items: center;
+  color: #c47a4e;
+  font-size: 1.1rem;
+}
+
+.restaurant-menu-preview li {
+  align-items: center;
+  grid-template-columns: 52px minmax(0, 1fr) auto auto;
+}
+
+.restaurant-menu-item-details {
+  min-width: 0;
+}
+
+.order-item-details {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.order-item-details .meal-thumbnail {
+  width: 48px;
+  height: 44px;
+}
+
+.admin-menu-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.admin-menu-preview-item {
+  display: grid;
+  width: 72px;
+  gap: 4px;
+}
+
+.admin-menu-preview-item img,
+.admin-menu-preview-item > span {
+  width: 72px;
+  height: 58px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f7eee4;
+}
+
+.admin-menu-preview-item small {
+  overflow: hidden;
+  color: #81776d;
+  font-size: 0.66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .order-item-control {
   display: inline-flex !important;
   min-width: 62px;
@@ -2692,7 +2760,7 @@
 
 .restaurant-menu-preview li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: 52px minmax(0, 1fr) auto auto;
   align-items: center;
 }
 
@@ -2903,8 +2971,13 @@
   }
 
   .restaurant-menu-preview li {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: 44px minmax(0, 1fr) auto auto;
     gap: 8px;
+  }
+
+  .meal-thumbnail {
+    width: 44px;
+    height: 42px;
   }
 
   .restaurant-order-card {
@@ -2967,11 +3040,22 @@
   }
 
   .restaurant-menu-preview li {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    row-gap: 6px;
+  }
+
+  .restaurant-menu-preview li > img,
+  .restaurant-menu-preview li > .meal-thumbnail-placeholder {
+    grid-row: span 2;
+  }
+
+  .restaurant-menu-preview li > strong {
+    grid-column: 3;
+    grid-row: 1;
   }
 
   .order-item-control {
-    grid-column: 2;
+    grid-column: 2 / 4;
     justify-self: end;
   }
 

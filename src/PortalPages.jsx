@@ -15,6 +15,21 @@ function getWhatsAppNumber(phone) {
   return digits;
 }
 
+async function removeMenuImageIfUnused(supabase, imageUrl) {
+  const imagePath = imageUrl?.split("/storage/v1/object/public/menu-images/")[1];
+  if (!imagePath) return { error: null };
+
+  const { count, error: referenceError } = await supabase
+    .from("order_request_items")
+    .select("id", { count: "exact", head: true })
+    .eq("image_url", imageUrl);
+  if (referenceError) return { error: referenceError };
+  if (count > 0) return { error: null };
+
+  const { error } = await supabase.storage.from("menu-images").remove([imagePath]);
+  return { error };
+}
+
 function PortalBrand() {
   return (
     <Link className="portal-brand" to="/" aria-label="QuickCrave home">
@@ -61,7 +76,7 @@ function PortalFrame({ children, audience = "customer" }) {
       ? [["/admin/dashboard", "Restaurant review"]]
     : [
         ["/customer/dashboard", "Discover"],
-        ["/customer/dashboard/orders", "Your orders"],
+        ["/customer/dashboard/orders", "Order history"],
         ["/customer/dashboard/favorites", "Favorites"],
         ["/customer/dashboard/profile", "Profile"],
       ];
@@ -172,7 +187,7 @@ function navIcon(label) {
     Menu: "☷",
     Settings: "⚙",
     Discover: "⌕",
-    "Your orders": "▤",
+    "Order history": "▤",
     Favorites: "♡",
     Profile: "○",
   };
@@ -275,11 +290,42 @@ export function AuthPage({ audience, mode }) {
   const isRestaurant = audience === "restaurant";
   const isAdmin = audience === "admin";
   const isSignup = mode === "signup";
+  const isRecovery = mode === "recovery";
+  const isPasswordReset = mode === "password-reset";
   const { configured, supabase } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [resetSession, setResetSession] = useState("checking");
+
+  useEffect(() => {
+    if (!isPasswordReset || !supabase) return undefined;
+
+    let active = true;
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!active) return;
+      if (error) {
+        setErrorMessage(error.message);
+        setResetSession("invalid");
+        return;
+      }
+      setResetSession(data.session ? "ready" : "invalid");
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (active && event === "PASSWORD_RECOVERY" && session) {
+        setResetSession("ready");
+        setErrorMessage("");
+      }
+    });
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [isPasswordReset, supabase]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -292,7 +338,27 @@ export function AuthPage({ audience, mode }) {
     const password = String(formData.get("password") ?? "");
 
     try {
-      if (isSignup) {
+      if (isRecovery) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/${audience}/reset-password`,
+        });
+        if (error) throw error;
+        setNotice("If an account exists for that email, we’ll send a password reset link.");
+      } else if (isPasswordReset) {
+        const confirmation = String(formData.get("password_confirmation") ?? "");
+        if (password.length < 8) throw new Error("Your password must be at least 8 characters.");
+        if (password !== confirmation) throw new Error("The password entries don’t match.");
+
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) {
+          setNotice("Your password was updated. Sign out before signing in with your new password.");
+        } else {
+          setNotice("Your password has been updated. You can now sign in with it.");
+        }
+        setResetSession("completed");
+      } else if (isSignup) {
         const fullName = String(formData.get("name") ?? "").trim();
         const phone = String(formData.get("phone") ?? "").trim();
         if (!isRestaurant) {
@@ -413,13 +479,30 @@ export function AuthPage({ audience, mode }) {
         </section>
         <section className="auth-card" aria-labelledby="auth-title">
           <div className="auth-card-heading">
-            <p className="section-eyebrow">{isSignup ? "GET STARTED" : "WELCOME BACK"}</p>
+            <p className="section-eyebrow">{isSignup ? "GET STARTED" : isRecovery || isPasswordReset ? "ACCOUNT RECOVERY" : "WELCOME BACK"}</p>
             <h2 id="auth-title">
-              {isSignup ? "Create your account" : "Sign in"}
+              {isSignup
+                ? "Create your account"
+                : isRecovery
+                  ? "Forgot your password?"
+                  : isPasswordReset
+                    ? "Choose a new password"
+                    : "Sign in"}
             </h2>
             <p>{isRestaurant ? "Restaurant account" : isAdmin ? "Administrator access" : "Customer account"}</p>
           </div>
-          <form className="auth-form" onSubmit={handleSubmit}>
+          {isPasswordReset && !configured ? (
+            <p className="auth-availability" role="alert">Password reset services aren’t configured yet. Add the Supabase environment variables to enable this form.</p>
+          ) : isPasswordReset && resetSession === "checking" ? (
+            <p role="status">Verifying your password reset link…</p>
+          ) : isPasswordReset && resetSession === "invalid" ? (
+            <div className="auth-notice" role="alert">
+              This password reset link is invalid or expired. Request a new one from the sign-in page.
+            </div>
+          ) : resetSession === "completed" ? (
+            <p className="auth-notice" role="status">{notice}</p>
+          ) : (
+            <form className="auth-form" onSubmit={handleSubmit}>
             {isSignup && (
               <>
                 <label htmlFor="account-name">{isRestaurant ? "Restaurant name" : "Your name"}</label>
@@ -451,17 +534,38 @@ export function AuthPage({ audience, mode }) {
                 />
               </>
             )}
-            <label htmlFor="account-email">Email address</label>
-            <input id="account-email" name="email" type="email" autoComplete="email" required />
-            <label htmlFor="account-password">Password</label>
-            <input
-              id="account-password"
-              name="password"
-              type="password"
-              autoComplete={isSignup ? "new-password" : "current-password"}
-              minLength={8}
-              required
-            />
+            {!isPasswordReset && (
+              <>
+                <label htmlFor="account-email">Email address</label>
+                <input id="account-email" name="email" type="email" autoComplete="email" required />
+              </>
+            )}
+            {!isRecovery && (
+              <>
+                <label htmlFor="account-password">Password</label>
+                <input
+                  id="account-password"
+                  name="password"
+                  type="password"
+                  autoComplete={isSignup || isPasswordReset ? "new-password" : "current-password"}
+                  minLength={8}
+                  required
+                />
+              </>
+            )}
+            {isPasswordReset && (
+              <>
+                <label htmlFor="password-confirmation">Confirm new password</label>
+                <input
+                  id="password-confirmation"
+                  name="password_confirmation"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
+              </>
+            )}
             {isRestaurant && isSignup && (
               <label className="auth-checkbox">
                 <input type="checkbox" required />
@@ -469,18 +573,36 @@ export function AuthPage({ audience, mode }) {
               </label>
             )}
             <button className="hero-primary-button auth-submit" type="submit" disabled={!configured || busy}>
-              {busy ? "Please wait…" : isSignup ? "Create account" : "Sign in"} <span aria-hidden="true">→</span>
+              {busy
+                ? "Please wait…"
+                : isSignup
+                  ? "Create account"
+                  : isRecovery
+                    ? "Send reset link"
+                    : isPasswordReset
+                      ? "Update password"
+                      : "Sign in"} <span aria-hidden="true">→</span>
             </button>
             {notice && <p className="auth-notice" role="status">{notice}</p>}
             {errorMessage && <p className="auth-error" role="alert">{errorMessage}</p>}
             {!configured && <p className="auth-availability">Account access isn’t configured yet. Add the Supabase environment variables to enable this form.</p>}
           </form>
-          {!isAdmin && (
+          )}
+          {isRecovery || isPasswordReset ? (
+            <p className="auth-switch">
+              <Link to={`/${audience}/login`}>Back to sign in</Link>
+            </p>
+          ) : !isAdmin ? (
             <p className="auth-switch">
               {isSignup ? "Already have an account?" : "New to QuickCrave?"}{" "}
               <Link to={`/${audience}/${isSignup ? "login" : "signup"}`}>
                 {isSignup ? "Sign in" : "Create an account"}
               </Link>
+            </p>
+          ) : null}
+          {!isSignup && !isRecovery && !isPasswordReset && (
+            <p className="auth-switch">
+              <Link to={`/${audience}/forgot-password`}>Forgot your password?</Link>
             </p>
           )}
           {isRestaurant && (
@@ -547,7 +669,7 @@ function CustomerDashboard({ section = "discover" }) {
   const [passwordError, setPasswordError] = useState("");
   const sections = {
     discover: ["DISCOVER", "A taste of your neighborhood", "Find local kitchens and dishes worth coming back for."],
-    orders: ["YOUR ORDERS", "Order history", "Keep track of your requests and order updates."],
+    orders: ["YOUR ORDERS", "Order history", "Keep track of your requests. Delivery workflows are coming soon."],
     favorites: ["SAVED FOR LATER", "Your favorites", "The restaurants and dishes you want to remember."],
     profile: ["YOUR ACCOUNT", "Profile & preferences", "Keep your contact and delivery details up to date."],
   };
@@ -573,7 +695,7 @@ function CustomerDashboard({ section = "discover" }) {
         setRestaurants(data ?? []);
         const { data: availableItems, error: menuError } = await supabase
           .from("menu_items")
-          .select("id, name, description, category, price, restaurants!inner(id, name, location)")
+          .select("id, name, description, category, price, image_url, restaurants!inner(id, name, location)")
           .eq("is_available", true)
           .eq("restaurants.status", "approved")
           .order("name");
@@ -642,7 +764,7 @@ function CustomerDashboard({ section = "discover" }) {
       if (ids.length) {
         const { data: items, error: itemsError } = await supabase
           .from("order_request_items")
-          .select("id, order_request_id, item_name, unit_price, quantity, line_total")
+          .select("id, order_request_id, item_name, unit_price, quantity, line_total, image_url")
           .in("order_request_id", ids);
         if (!active) return;
         if (itemsError) {
@@ -772,14 +894,15 @@ function CustomerDashboard({ section = "discover" }) {
       customer_phone: profile.phone,
       customer_note: orderNote,
     });
-    setOrderSubmitting(false);
     if (error) {
+      setOrderSubmitting(false);
       setOrderError(error.message);
       return;
     }
     clearOrderCart();
     setOrderNote("");
     setOrderStatus(`Order request ${String(data).slice(0, 8).toUpperCase()} was sent to the restaurant. They’ll contact you to confirm availability, payment, and delivery.`);
+    setOrderSubmitting(false);
   }
 
   async function cancelCustomerOrder(orderId) {
@@ -894,7 +1017,10 @@ function CustomerDashboard({ section = "discover" }) {
                         .filter((item) => item.restaurants.id === restaurant.id)
                         .map((item) => (
                           <li key={item.id}>
-                            <span><strong>{item.name}</strong><small>{item.description || item.category}</small></span>
+                            {item.image_url
+                              ? <img className="meal-thumbnail" src={item.image_url} alt={item.name} loading="lazy" />
+                              : <span className="meal-thumbnail meal-thumbnail-placeholder" aria-hidden="true">✦</span>}
+                            <span className="restaurant-menu-item-details"><strong>{item.name}</strong><small>{item.description || item.category}</small></span>
                             <strong>{priceFormatter.format(Number(item.price))}</strong>
                             <span className="order-item-control">
                               {orderCart.some((selected) => selected.id === item.id) ? (
@@ -939,7 +1065,12 @@ function CustomerDashboard({ section = "discover" }) {
               <ul className="order-cart-list">
                 {orderCart.map((item) => (
                   <li key={item.id}>
-                    <span>{item.quantity} × {item.name}</span>
+                    <span className="order-item-details">
+                      {item.image_url
+                        ? <img className="meal-thumbnail" src={item.image_url} alt={item.name} loading="lazy" />
+                        : <span className="meal-thumbnail meal-thumbnail-placeholder" aria-hidden="true">✦</span>}
+                      {item.quantity} × {item.name}
+                    </span>
                     <strong>{priceFormatter.format(Number(item.price) * item.quantity)}</strong>
                   </li>
                 ))}
@@ -963,10 +1094,6 @@ function CustomerDashboard({ section = "discover" }) {
             </form>
           )}
           {orderStatus && <p className="profile-status" role="status">{orderStatus}</p>}
-          <div className="customer-shortcuts">
-            <Link to="/customer/dashboard/orders"><span>▤</span><strong>Order history</strong><small>See updates from your restaurants</small></Link>
-            <Link to="/customer/dashboard/favorites"><span>♡</span><strong>Your favorites</strong><small>Keep your go-to dishes close</small></Link>
-          </div>
         </>
       )}
       {activeSection === "orders" && (
@@ -999,7 +1126,12 @@ function CustomerDashboard({ section = "discover" }) {
                 <ul className="order-cart-list">
                   {order.items.map((item) => (
                     <li key={item.id}>
-                      <span>{item.quantity} × {item.item_name}</span>
+                      <span className="order-item-details">
+                        {item.image_url
+                          ? <img className="meal-thumbnail" src={item.image_url} alt={item.item_name} loading="lazy" />
+                          : <span className="meal-thumbnail meal-thumbnail-placeholder" aria-hidden="true">✦</span>}
+                        {item.quantity} × {item.item_name}
+                      </span>
                       <strong>{priceFormatter.format(Number(item.line_total))}</strong>
                     </li>
                   ))}
@@ -1180,7 +1312,7 @@ function RestaurantDashboard({ section = "overview" }) {
       setMenuError("");
       const { data, error } = await supabase
         .from("menu_items")
-        .select("id, name, description, category, price, is_available")
+        .select("id, name, description, category, price, is_available, image_url")
         .eq("restaurant_id", restaurant.id)
         .order("created_at", { ascending: false });
       if (!active) return;
@@ -1221,7 +1353,7 @@ function RestaurantDashboard({ section = "overview" }) {
       if (ids.length && section === "orders") {
         const { data: items, error: itemsError } = await supabase
           .from("order_request_items")
-          .select("id, order_request_id, item_name, unit_price, quantity, line_total")
+          .select("id, order_request_id, item_name, unit_price, quantity, line_total, image_url")
           .in("order_request_id", ids);
         if (!active) return;
         if (itemsError) {
@@ -1296,11 +1428,10 @@ function RestaurantDashboard({ section = "overview" }) {
         return;
       }
       setMenuItems((current) => current.map((item) => item.id === data.id ? data : item));
-      const previousImagePath = currentItem?.image_url?.split("/storage/v1/object/public/menu-images/")[1];
-      if (dishImage && previousImagePath) {
-        const { error: cleanupError } = await supabase.storage.from("menu-images").remove([previousImagePath]);
+      if (dishImage && currentItem?.image_url) {
+        const { error: cleanupError } = await removeMenuImageIfUnused(supabase, currentItem.image_url);
         if (cleanupError) {
-          setMenuError(`Menu changes were saved, but the previous photo could not be removed: ${cleanupError.message}`);
+          setMenuError(`Menu changes were saved, but the previous photo could not be safely removed: ${cleanupError.message}`);
         }
       }
       resetMenuForm();
@@ -1387,11 +1518,10 @@ function RestaurantDashboard({ section = "overview" }) {
       return;
     }
     setMenuItems((current) => current.filter((entry) => entry.id !== id));
-    const imagePath = item?.image_url?.split("/storage/v1/object/public/menu-images/")[1];
-    if (imagePath) {
-      const { error: cleanupError } = await supabase.storage.from("menu-images").remove([imagePath]);
+    if (item?.image_url) {
+      const { error: cleanupError } = await removeMenuImageIfUnused(supabase, item.image_url);
       if (cleanupError) {
-        setMenuError(`Menu item was removed, but its photo could not be deleted: ${cleanupError.message}`);
+        setMenuError(`Menu item was removed, but its photo could not be safely deleted: ${cleanupError.message}`);
       }
     }
   }
@@ -1610,7 +1740,12 @@ function RestaurantDashboard({ section = "overview" }) {
                     <ul className="order-cart-list">
                       {order.items.map((item) => (
                         <li key={item.id}>
-                          <span>{item.quantity} × {item.item_name}</span>
+                          <span className="order-item-details">
+                            {item.image_url
+                              ? <img className="meal-thumbnail" src={item.image_url} alt={item.item_name} loading="lazy" />
+                              : <span className="meal-thumbnail meal-thumbnail-placeholder" aria-hidden="true">✦</span>}
+                            {item.quantity} × {item.item_name}
+                          </span>
                           <strong>{priceFormatter.format(Number(item.line_total))}</strong>
                         </li>
                       ))}
@@ -1645,7 +1780,7 @@ function RestaurantDashboard({ section = "overview" }) {
       {activeSection === "menu" && (
         <>
           <section className="portal-card menu-editor-card">
-            <div className="card-title-row"><div><h2>Add a menu item</h2><p>Add the dish details customers need to make a choice.</p></div></div>
+            <div className="card-title-row"><div><h2>Add a menu item</h2><p>Add the dish details customers need to make a choice.</p></div><span className="status-pill">Dietary &amp; allergen info: coming soon</span></div>
             {restaurantRole !== "owner" && <p className="editor-warning">Only restaurant owners can edit the menu right now.</p>}
             <form className="menu-editor-form" onSubmit={addMenuItem}>
               <label>Dish name<input value={dishName} onChange={(event) => setDishName(event.target.value)} placeholder="e.g. House special" required /></label>
@@ -1665,7 +1800,7 @@ function RestaurantDashboard({ section = "overview" }) {
               <button className="hero-primary-button" type="submit" disabled={restaurantRole !== "owner" || restaurantLoading}>{editingItemId ? "Save changes" : "Add item"} <span aria-hidden="true">{editingItemId ? "→" : "+"}</span></button>
               {editingItemId && <button className="menu-cancel-button" type="button" onClick={resetMenuForm}>Cancel</button>}
             </form>
-            <p className="editor-warning">Photos: JPEG, PNG, or WebP up to 5 MB. Dietary and allergen information will be added in a later update.</p>
+            <p className="editor-warning">Photos: JPEG, PNG, or WebP up to 5 MB. Dietary and allergen fields are coming soon.</p>
           </section>
           <section className="portal-card menu-list-card">
             <div className="card-title-row"><div><h2>Menu items</h2><p>{menuItems.length} {menuItems.length === 1 ? "item" : "items"}</p></div></div>
@@ -1715,7 +1850,11 @@ function RestaurantDashboard({ section = "overview" }) {
           </div>
           <button className="hero-primary-button profile-save" type="submit" disabled={restaurantLoading || restaurantRole !== "owner"}>Save changes <span aria-hidden="true">→</span></button>
           {settingsStatus && <p className="profile-status" role="status">{settingsStatus}</p>}
-          <div className="settings-checklist"><span>○ Staff access and invitations</span><span>○ Email &amp; WhatsApp notifications</span></div>
+          <div className="settings-checklist">
+            <span>Staff access and invitations <span className="status-pill">Coming soon</span></span>
+            <span>Automatic email &amp; WhatsApp notifications <span className="status-pill">Coming soon</span></span>
+            <span>Delivery workflows <span className="status-pill">Coming soon</span></span>
+          </div>
         </form>
       )}
     </PortalFrame>
@@ -1797,22 +1936,36 @@ function AdminDashboard() {
 
       const restaurantIds = (data ?? []).map((restaurant) => restaurant.id);
       if (restaurantIds.length) {
-        const { data: contacts, error: contactsError } = await supabase
-          .from("restaurant_contacts")
-          .select("restaurant_id, contact_email, phone, whatsapp")
-          .in("restaurant_id", restaurantIds);
+        const [{ data: contacts, error: contactsError }, { data: menuItems, error: menuError }] = await Promise.all([
+          supabase
+            .from("restaurant_contacts")
+            .select("restaurant_id, contact_email, phone, whatsapp")
+            .in("restaurant_id", restaurantIds),
+          supabase
+            .from("menu_items")
+            .select("id, restaurant_id, name, image_url")
+            .in("restaurant_id", restaurantIds)
+            .order("name"),
+        ]);
         if (!active) return;
-        if (contactsError) {
-          setLoadError(contactsError.message);
+        if (contactsError || menuError) {
+          setLoadError(contactsError?.message ?? menuError.message);
           setLoading(false);
           return;
         }
         const contactsByRestaurant = new Map(
           (contacts ?? []).map((contact) => [contact.restaurant_id, contact]),
         );
+        const menuByRestaurant = new Map();
+        for (const item of menuItems ?? []) {
+          const items = menuByRestaurant.get(item.restaurant_id) ?? [];
+          items.push(item);
+          menuByRestaurant.set(item.restaurant_id, items);
+        }
         setRestaurants((data ?? []).map((restaurant) => ({
           ...restaurant,
           contacts: contactsByRestaurant.get(restaurant.id),
+          menuItems: menuByRestaurant.get(restaurant.id) ?? [],
         })));
       } else {
         setRestaurants([]);
@@ -1936,6 +2089,18 @@ function AdminDashboard() {
                     {restaurant.contacts?.phone ? ` · ${restaurant.contacts.phone}` : ""}
                     {restaurant.contacts?.whatsapp ? ` · WhatsApp ${restaurant.contacts.whatsapp}` : ""}
                   </p>
+                  {restaurant.menuItems.length > 0 && (
+                    <div className="admin-menu-preview" aria-label={`${restaurant.name} menu photos`}>
+                      {restaurant.menuItems.slice(0, 4).map((item) => (
+                        <div className="admin-menu-preview-item" key={item.id}>
+                          {item.image_url
+                            ? <img src={item.image_url} alt={item.name} loading="lazy" />
+                            : <span className="meal-thumbnail-placeholder" aria-hidden="true">✦</span>}
+                          <small>{item.name}</small>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <small>Submitted {new Date(restaurant.created_at).toLocaleDateString()}</small>
                 </div>
                 <div className="admin-restaurant-actions">

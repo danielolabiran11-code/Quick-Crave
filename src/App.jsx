@@ -517,9 +517,15 @@ function App() {
       <Route path="/account" element={<AccountChoicePage />} />
       <Route path="/customer/login" element={<AuthPage audience="customer" mode="login" />} />
       <Route path="/customer/signup" element={<AuthPage audience="customer" mode="signup" />} />
+      <Route path="/customer/forgot-password" element={<AuthPage audience="customer" mode="recovery" />} />
+      <Route path="/customer/reset-password" element={<AuthPage audience="customer" mode="password-reset" />} />
       <Route path="/restaurant/login" element={<AuthPage audience="restaurant" mode="login" />} />
       <Route path="/restaurant/signup" element={<AuthPage audience="restaurant" mode="signup" />} />
+      <Route path="/restaurant/forgot-password" element={<AuthPage audience="restaurant" mode="recovery" />} />
+      <Route path="/restaurant/reset-password" element={<AuthPage audience="restaurant" mode="password-reset" />} />
       <Route path="/admin/login" element={<AuthPage audience="admin" mode="login" />} />
+      <Route path="/admin/forgot-password" element={<AuthPage audience="admin" mode="recovery" />} />
+      <Route path="/admin/reset-password" element={<AuthPage audience="admin" mode="password-reset" />} />
       <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
       <Route path="/customer/dashboard/*" element={<CustomerDashboardPage />} />
       <Route path="/restaurant/dashboard/*" element={<RestaurantDashboardPage />} />
