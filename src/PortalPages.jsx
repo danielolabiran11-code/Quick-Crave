@@ -9,6 +9,55 @@ const priceFormatter = new Intl.NumberFormat("en-NG", {
   maximumFractionDigits: 2,
 });
 
+function isMissingOrderItemImageColumn(error) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return error?.code === "42703"
+    || (message.includes("image_url") && (message.includes("does not exist") || message.includes("schema cache")));
+}
+
+async function loadOrderItems(supabase, orderIds) {
+  const selection = "id, order_request_id, item_name, unit_price, quantity, line_total";
+  const { data, error } = await supabase
+    .from("order_request_items")
+    .select(`${selection}, image_url`)
+    .in("order_request_id", orderIds);
+
+  if (!error) return { data: data ?? [], error: null, warning: "" };
+  if (!isMissingOrderItemImageColumn(error)) return { data: null, error, warning: "" };
+
+  const legacyResult = await supabase
+    .from("order_request_items")
+    .select(`${selection}, menu_item_id`)
+    .in("order_request_id", orderIds);
+  if (legacyResult.error) return { data: null, error: legacyResult.error, warning: "" };
+
+  const menuItemIds = [...new Set((legacyResult.data ?? [])
+    .map((item) => item.menu_item_id)
+    .filter(Boolean))];
+  let imageWarning = "";
+  let imagesByMenuItem = new Map();
+  if (menuItemIds.length) {
+    const { data: menuItems, error: menuError } = await supabase
+      .from("menu_items")
+      .select("id, image_url")
+      .in("id", menuItemIds);
+    if (menuError) {
+      imageWarning = ` Current menu photos could not be loaded: ${menuError.message}`;
+    } else {
+      imagesByMenuItem = new Map((menuItems ?? []).map((item) => [item.id, item.image_url]));
+    }
+  }
+
+  return {
+    data: (legacyResult.data ?? []).map((item) => ({
+      ...item,
+      image_url: imagesByMenuItem.get(item.menu_item_id) ?? "",
+    })),
+    error: null,
+    warning: `Order photos are using the current menu images. Apply migration 20261104120000_order_item_images_and_admin_menu_preview.sql in Supabase to save image snapshots for order history.${imageWarning}`,
+  };
+}
+
 function getWhatsAppNumber(phone) {
   const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("0") && digits.length === 11) return `234${digits.slice(1)}`;
@@ -675,6 +724,7 @@ function CustomerDashboard({ section = "discover" }) {
   const [customerOrders, setCustomerOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(section === "orders");
   const [ordersError, setOrdersError] = useState("");
+  const [ordersNotice, setOrdersNotice] = useState("");
   const [ordersReloadKey, setOrdersReloadKey] = useState(0);
   const [cancellingOrderId, setCancellingOrderId] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
@@ -776,6 +826,7 @@ function CustomerDashboard({ section = "discover" }) {
     async function loadCustomerOrders() {
       setOrdersLoading(true);
       setOrdersError("");
+      setOrdersNotice("");
       const { data: orders, error } = await supabase
         .from("order_requests")
         .select("id, restaurant_id, status, customer_name, customer_phone, delivery_address, customer_note, subtotal, created_at, restaurants(name)")
@@ -789,16 +840,14 @@ function CustomerDashboard({ section = "discover" }) {
 
       const ids = (orders ?? []).map((order) => order.id);
       if (ids.length) {
-        const { data: items, error: itemsError } = await supabase
-          .from("order_request_items")
-          .select("id, order_request_id, item_name, unit_price, quantity, line_total, image_url")
-          .in("order_request_id", ids);
+        const { data: items, error: itemsError, warning } = await loadOrderItems(supabase, ids);
         if (!active) return;
         if (itemsError) {
           setOrdersError(itemsError.message);
           setOrdersLoading(false);
           return;
         }
+        setOrdersNotice(warning);
         const itemsByOrder = new Map();
         for (const item of items ?? []) {
           const current = itemsByOrder.get(item.order_request_id) ?? [];
@@ -1154,7 +1203,9 @@ function CustomerDashboard({ section = "discover" }) {
         </>
       )}
       {activeSection === "orders" && (
-        ordersLoading ? (
+        <>
+        {ordersNotice && <p className="editor-warning" role="status">{ordersNotice}</p>}
+        {ordersLoading ? (
           <LoadingState label="Loading your order requests" rows={2} />
         ) : ordersError ? (
           <div className="dashboard-error" role="alert">
@@ -1211,7 +1262,8 @@ function CustomerDashboard({ section = "discover" }) {
               </article>
             ))}
           </div>
-        )
+        )}
+        </>
       )}
       {activeSection === "favorites" && (
         <EmptyState
@@ -1282,6 +1334,7 @@ function RestaurantDashboard({ section = "overview" }) {
   const [restaurantOrders, setRestaurantOrders] = useState([]);
   const [orderInboxLoading, setOrderInboxLoading] = useState(section === "orders" || section === "overview");
   const [orderInboxError, setOrderInboxError] = useState("");
+  const [orderInboxNotice, setOrderInboxNotice] = useState("");
   const [updatingOrderId, setUpdatingOrderId] = useState("");
   const [menuLoading, setMenuLoading] = useState(section === "menu" || section === "overview");
   const [menuSaving, setMenuSaving] = useState(false);
@@ -1407,6 +1460,7 @@ function RestaurantDashboard({ section = "overview" }) {
     async function loadRestaurantOrders() {
       setOrderInboxLoading(true);
       setOrderInboxError("");
+      setOrderInboxNotice("");
       const { data: orders, error } = await supabase
         .from("order_requests")
         .select("id, customer_name, customer_email, customer_phone, delivery_address, customer_note, subtotal, status, created_at")
@@ -1421,16 +1475,14 @@ function RestaurantDashboard({ section = "overview" }) {
 
       const ids = (orders ?? []).map((order) => order.id);
       if (ids.length && section === "orders") {
-        const { data: items, error: itemsError } = await supabase
-          .from("order_request_items")
-          .select("id, order_request_id, item_name, unit_price, quantity, line_total, image_url")
-          .in("order_request_id", ids);
+        const { data: items, error: itemsError, warning } = await loadOrderItems(supabase, ids);
         if (!active) return;
         if (itemsError) {
           setOrderInboxError(itemsError.message);
           setOrderInboxLoading(false);
           return;
         }
+        setOrderInboxNotice(warning);
         const itemsByOrder = new Map();
         for (const item of items ?? []) {
           const current = itemsByOrder.get(item.order_request_id) ?? [];
@@ -1759,6 +1811,7 @@ function RestaurantDashboard({ section = "overview" }) {
               <button className="secondary-button" type="button" onClick={() => setWorkspaceReloadKey((key) => key + 1)}>Try again</button>
             </div>
           )}
+          {orderInboxNotice && <p className="editor-warning" role="status">{orderInboxNotice}</p>}
           <div className="dashboard-section-heading">
             <div><h2>Requests that need attention</h2><p>Accept a request to confirm you’re working on it, then coordinate payment and delivery directly.</p></div>
             <Link className="text-arrow-link" to="/restaurant/dashboard/orders">Open order inbox <span aria-hidden="true">→</span></Link>
@@ -1822,6 +1875,7 @@ function RestaurantDashboard({ section = "overview" }) {
               <button className="secondary-button" type="button" onClick={() => setWorkspaceReloadKey((key) => key + 1)}>Try again</button>
             </div>
           )}
+          {orderInboxNotice && <p className="editor-warning" role="status">{orderInboxNotice}</p>}
           {restaurant?.status !== "approved" ? (
             <EmptyState icon="◷" title="Your restaurant is not approved yet" text="You can review existing requests, but customers can only submit orders to approved restaurants." />
           ) : orderInboxLoading ? (
