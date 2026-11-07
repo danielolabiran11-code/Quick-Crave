@@ -5,11 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Discover neighborhood restaurants and explore locally available menus with QuickCrave."
+      content="Explore useful finds from trusted local sellers, all in one place with QuickCrave."
     />
     <meta name="theme-color" content="#fffaf4" />
-    <title>QuickCrave — Discover neighborhood food</title>
+    <title>QuickCrave — Find what fits your day</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem("quickcrave:theme") === "dark" ? "dark" : "light";
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

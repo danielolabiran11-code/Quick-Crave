@@ -40,6 +40,37 @@ a {
   text-decoration: none;
 }
 
+.auth-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-toggle {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border: 1px solid #e8ded3;
+  border-radius: 12px;
+  background: #fff;
+  color: #65584d;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.theme-toggle svg {
+  width: 19px;
+  height: 19px;
+}
+
+.theme-toggle:hover {
+  border-color: #efb091;
+  background: #fff6ef;
+  color: #c94d25;
+}
+
 .site-header {
   position: sticky;
   z-index: 30;
@@ -2286,4 +2317,271 @@ button:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+@scope (html[data-theme="dark"]) {
+:scope {
+  color-scheme: dark;
+  color: #f0f1ec;
+  background: #101310;
+  --color-ink: #f0f1ec;
+  --color-muted: #a4aaa2;
+  --color-orange: #ef7947;
+  --color-orange-dark: #ff9a69;
+  --color-cream: #101310;
+}
+
+body {
+  color: #f0f1ec;
+  background:
+    radial-gradient(ellipse at 50% -150px, rgba(102, 71, 48, 0.18), transparent 55%),
+    #101310;
+}
+
+.site-header {
+  border-color: #292e29;
+  background: rgba(16, 19, 16, 0.92);
+}
+
+.navigation-menu {
+  border-color: #303630;
+  background: rgba(18, 22, 19, 0.98);
+  box-shadow: 0 16px 25px rgba(0, 0, 0, 0.35);
+}
+
+.menu-toggle {
+  border-color: #353b35;
+  background: #1a1f1b;
+}
+
+.navigation-link,
+.navigation-account-link,
+.hero-secondary-link,
+.explore-all-link,
+.dish-meta,
+.footer-link-group a,
+.footer-bottom,
+.partner-login-link {
+  color: #b6bcb5;
+}
+
+.navigation-link:hover,
+.navigation-link:focus-visible,
+.navigation-link.is-active,
+.hero-secondary-link:hover,
+.explore-all-link:hover {
+  color: #f5f4ed;
+}
+
+#favorites-count,
+.menu-filter,
+.dish-favorite,
+.favorites-empty,
+.public-menu-state,
+.story-note,
+.partner-form,
+.partner-register-card,
+.dish-add-button {
+  border-color: #343a34;
+  background: #1a1f1b;
+  color: #e7e9e3;
+}
+
+.hero-eyebrow,
+.hero-proof,
+.hero-secondary-link,
+.section-description,
+.dish-restaurant,
+.dish-description,
+.partner-copy > p:not(.section-eyebrow),
+.partner-register-card > p,
+.footer-brand > p {
+  color: #a4aaa2;
+}
+
+.explore-section,
+.ordering-section,
+.story-section,
+.partner-section,
+.site-footer {
+  border-color: #292e29;
+  background: #141815;
+}
+
+.ordering-section {
+  background: #191f1a;
+}
+
+.dish-card,
+.partner-benefits li,
+.story-values > div {
+  border-color: #303630;
+  background: #1a1f1b;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+}
+
+.dish-image,
+.dish-image-placeholder,
+.story-photo {
+  background: #252b25;
+}
+
+.dish-image-placeholder {
+  background: linear-gradient(135deg, #292f29, #1b201c);
+  color: #ef9b6e;
+}
+
+.dish-title-row h3,
+.favorites-heading,
+.ordering-steps h3,
+.story-copy,
+.story-values strong,
+.partner-copy h2,
+.partner-register-card h3,
+.footer-link-group h2,
+.footer-bottom a {
+  color: #f0f1ec;
+}
+
+.dish-meta {
+  border-color: #353a34;
+}
+
+.dish-description {
+  display: -webkit-box;
+  min-height: 2.8em;
+  overflow: hidden;
+  margin: -5px 0 12px;
+  color: #a4aaa2;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.menu-filter {
+  border-color: #353b35;
+  background: #1a1f1b;
+}
+
+.menu-filter.is-selected {
+  border-color: var(--color-orange);
+  background: var(--color-orange);
+  color: #151714;
+}
+
+.dish-favorite:hover {
+  background: #292e29;
+}
+
+.dish-favorite.is-favorite {
+  background: #422a21;
+  color: #ff9a69;
+}
+
+.story-photo-label {
+  border-color: #444942;
+  background: rgba(20, 24, 21, 0.92);
+  color: #f0f1ec;
+}
+
+.story-link,
+.footer-order-link,
+.footer-order-link > span {
+  color: #ff9a69;
+}
+
+.favorites-section,
+.footer-bottom,
+.footer-main {
+  border-color: #303630;
+}
+
+.partner-benefits li > span,
+.value-mark {
+  color: #ef9a6b;
+}
+
+.dish-add-button {
+  border-color: #5a3929;
+  background: #2a211c;
+  color: #ffad81;
+}
+
+.dish-add-button:hover {
+  border-color: var(--color-orange);
+  background: var(--color-orange);
+  color: #151714;
+}
+
+.order-button,
+.hero-primary-button,
+.navigation-join-link {
+  color: #151714;
+}
+
+.order-button:hover,
+.hero-primary-button:hover,
+.navigation-join-link:hover {
+  color: #151714;
+}
+
+.ordering-steps li,
+.story-note,
+.partner-form,
+.partner-benefits li {
+  border-color: #303630;
+  background: #1a1f1b;
+}
+
+.step-number,
+.partner-benefits li > span,
+.story-note-icon {
+  background: #292f29;
+  color: #ff9a69;
+}
+
+.ordering-steps h3,
+.story-lead,
+.story-values strong,
+.partner-benefits,
+.partner-form h3,
+.story-note strong {
+  color: #eff1eb;
+}
+
+.story-description,
+.story-values p,
+.story-note,
+.partner-copy .partner-disclaimer,
+.partner-form > p {
+  color: #a4aaa2;
+}
+
+.partner-form input,
+.partner-form textarea,
+.checkout-form input,
+.checkout-form textarea {
+  border-color: #3a413a;
+  background: #111512;
+  color: #eff1eb;
+}
+
+.partner-form input::placeholder,
+.checkout-form input::placeholder,
+.checkout-form textarea::placeholder {
+  color: #808981;
+}
+
+.theme-toggle {
+  border-color: #353b35;
+  background: #1a1f1b;
+  color: #d7ddd4;
+}
+
+.theme-toggle:hover {
+  border-color: #65412e;
+  background: #2a211c;
+  color: #ff9a69;
+}
 }

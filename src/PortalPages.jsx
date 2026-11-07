@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./lib/AuthContext.jsx";
 import LoadingIndicator from "./LoadingIndicator.jsx";
+import { ThemeToggle } from "./ThemeContext.jsx";
 
 const priceFormatter = new Intl.NumberFormat("en-NG", {
   style: "currency",
@@ -86,12 +87,8 @@ function PortalBrand() {
       <span className="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 40 40" fill="none">
           <path
-            d="M21.5 4.5c1.8 7.1-3.1 8.3-3.1 13.1 0 2.2 1.1 3.6 2.8 4.5-.2-3.1 1.5-5.3 4.7-7.5 3.5 3.4 5.4 7.1 5.4 11.1 0 6-4.8 10-11.2 10S8.9 31.7 8.9 25.8c0-4.9 3.1-8.5 7.8-12.1-.7 5.2 1.7 6.7 3.5 7.1-1.6-5.6 4.1-8.8 1.3-16.3Z"
+            d="m20 3 4.6 12.4L37 20l-12.4 4.6L20 37l-4.6-12.4L3 20l12.4-4.6L20 3Z"
             fill="currentColor"
-          />
-          <path
-            d="M20.1 29.7c1.8-2.1 1.8-4 1.6-5.3 2.8 1.8 4.1 3.8 4.1 6 0 2.6-2 4.3-4.7 4.3s-4.7-1.7-4.7-4.1c0-1.5.8-2.8 2.2-4 .1 1.5.5 2.4 1.5 3.1Z"
-            fill="#FFF9F2"
           />
         </svg>
       </span>
@@ -120,11 +117,11 @@ function PortalFrame({ children, audience = "customer" }) {
     ? [
         ["/restaurant/dashboard", "Overview"],
         ["/restaurant/dashboard/orders", "Orders"],
-        ["/restaurant/dashboard/menu", "Menu"],
+        ["/restaurant/dashboard/menu", "Catalog"],
         ["/restaurant/dashboard/settings", "Settings"],
       ]
     : audience === "admin"
-      ? [["/admin/dashboard", "Restaurant review"]]
+      ? [["/admin/dashboard", "Seller review"]]
     : [
         ["/customer/dashboard", "Discover"],
         ["/customer/dashboard/orders", "Order history"],
@@ -146,8 +143,9 @@ function PortalFrame({ children, audience = "customer" }) {
       <header className="portal-topbar">
         <PortalBrand />
         <div className="portal-topbar-right">
-          <span className="portal-account-label">{isRestaurant ? "Restaurant workspace" : audience === "admin" ? "Administrator" : "Customer account"}</span>
+          <span className="portal-account-label">{isRestaurant ? "Business workspace" : audience === "admin" ? "Administrator" : "Customer account"}</span>
           <span className="portal-user-email">{user?.email}</span>
+          <ThemeToggle />
           <button
             className="portal-signout"
             type="button"
@@ -195,10 +193,10 @@ function PortalFrame({ children, audience = "customer" }) {
           aria-label={`${audience} workspace navigation`}
         >
           <div className="portal-sidebar-heading">
-            <span className="portal-avatar">{isRestaurant ? "R" : "Q"}</span>
+            <span className="portal-avatar">{isRestaurant ? "B" : "Q"}</span>
             <div>
-              <strong>{isRestaurant ? "Restaurant workspace" : audience === "admin" ? "QuickCrave admin" : "Customer workspace"}</strong>
-              <span>{isRestaurant ? "Manage your business" : audience === "admin" ? "Manage the marketplace" : "Find your next favorite"}</span>
+              <strong>{isRestaurant ? "Business workspace" : audience === "admin" ? "QuickCrave admin" : "Customer workspace"}</strong>
+              <span>{isRestaurant ? "Manage your listings" : audience === "admin" ? "Manage the marketplace" : "Find your next favorite"}</span>
             </div>
             <button
               className="portal-sidebar-close"
@@ -226,7 +224,7 @@ function PortalFrame({ children, audience = "customer" }) {
           </nav>
           <div className="portal-sidebar-footer">
             <span className="portal-footer-mark" aria-hidden="true">✦</span>
-            <p>Good food starts close to home.</p>
+            <p>Good finds start close to home.</p>
             <Link to="/" onClick={() => setMobileSidebarOpen(false)}>Explore QuickCrave</Link>
           </div>
         </aside>
@@ -241,10 +239,10 @@ function PortalFrame({ children, audience = "customer" }) {
 
 function navIcon(label) {
   const icons = {
-    "Restaurant review": "✓",
+    "Seller review": "✓",
     Overview: "⌂",
     Orders: "▤",
-    Menu: "☷",
+    Catalog: "☷",
     Settings: "⚙",
     Discover: "⌕",
     "Order history": "▤",
@@ -490,7 +488,7 @@ export function AuthPage({ audience, mode }) {
           if (profile?.account_type !== audience) {
             await supabase.auth.signOut();
             throw new Error(
-              `This is not a ${isRestaurant ? "restaurant" : "customer"} account. Choose the correct sign-in page.`,
+              "This account does not match the selected sign-in type. Choose the correct sign-in page.",
             );
           }
         }
@@ -505,7 +503,7 @@ export function AuthPage({ audience, mode }) {
           if (membershipError) throw membershipError;
           if (!membership) {
             await supabase.auth.signOut();
-            throw new Error("No restaurant workspace is linked to this account.");
+            throw new Error("No business workspace is linked to this account.");
           }
         }
         navigate(`/${audience}/dashboard`, { replace: true });
@@ -521,22 +519,25 @@ export function AuthPage({ audience, mode }) {
     <main className="auth-page">
       <header className="auth-topbar">
         <PortalBrand />
-        <HomeLink label="Back to homepage" />
+        <div className="auth-topbar-actions">
+          <ThemeToggle />
+          <HomeLink label="Back to homepage" />
+        </div>
       </header>
       <div className="auth-layout">
         <section className="auth-story">
-          <span className="auth-eyebrow">{isRestaurant ? "FOR RESTAURANTS" : isAdmin ? "QUICKCRAVE ADMIN" : "FOR FOOD LOVERS"}</span>
-          <h1>{isRestaurant ? "Your kitchen’s next chapter starts here." : isAdmin ? "Marketplace administration." : "Good food is closer than you think."}</h1>
+          <span className="auth-eyebrow">{isRestaurant ? "FOR LOCAL BUSINESSES" : isAdmin ? "QUICKCRAVE ADMIN" : "FOR LOCAL SHOPPERS"}</span>
+          <h1>{isRestaurant ? "Your next chapter starts here." : isAdmin ? "Marketplace administration." : "Find more of what you love."}</h1>
           <p>
             {isRestaurant
-              ? "Build your restaurant presence, keep your menu current, and stay close to every order."
+              ? "Build your business presence, keep your catalog current, and stay close to every request."
               : isAdmin
-                ? "Review restaurant registrations and keep the QuickCrave marketplace trustworthy."
-                : "Discover neighborhood kitchens, keep your favorites close, and make ordering feel easy."}
+                ? "Review seller registrations and keep the QuickCrave marketplace trustworthy."
+                : "Explore local listings, keep your favorites close, and make requests feel easy."}
           </p>
           <div className="auth-story-note">
             <span aria-hidden="true">✦</span>
-            <span>{isRestaurant ? "One workspace for your menu and team." : "A little local flavor goes a long way."}</span>
+            <span>{isRestaurant ? "One workspace for your listings and team." : "A little discovery goes a long way."}</span>
           </div>
         </section>
         <section className="auth-card" aria-labelledby="auth-title">
@@ -551,7 +552,7 @@ export function AuthPage({ audience, mode }) {
                     ? "Choose a new password"
                     : "Sign in"}
             </h2>
-            <p>{isRestaurant ? "Restaurant account" : isAdmin ? "Administrator access" : "Customer account"}</p>
+            <p>{isRestaurant ? "Business account" : isAdmin ? "Administrator access" : "Customer account"}</p>
           </div>
           {isPasswordReset && !configured ? (
             <p className="auth-availability" role="alert">Password reset services aren’t configured yet. Add the Supabase environment variables to enable this form.</p>
@@ -567,7 +568,7 @@ export function AuthPage({ audience, mode }) {
             <form className="auth-form" onSubmit={handleSubmit}>
             {isSignup && (
               <>
-                <label htmlFor="account-name">{isRestaurant ? "Restaurant name" : "Your name"}</label>
+                <label htmlFor="account-name">{isRestaurant ? "Business name" : "Your name"}</label>
                 <input
                   id="account-name"
                   name="name"
@@ -578,7 +579,7 @@ export function AuthPage({ audience, mode }) {
             )}
             {isRestaurant && isSignup && (
               <>
-                <label htmlFor="restaurant-phone">Restaurant phone</label>
+                <label htmlFor="restaurant-phone">Business phone</label>
                 <input
                   id="restaurant-phone"
                   name="phone"
@@ -631,7 +632,7 @@ export function AuthPage({ audience, mode }) {
             {isRestaurant && isSignup && (
               <label className="auth-checkbox">
                 <input type="checkbox" required />
-                <span>I’m authorized to create an account for this restaurant.</span>
+                <span>I’m authorized to create an account for this business.</span>
               </label>
             )}
             <button className="hero-primary-button auth-submit" type="submit" disabled={!configured || busy}>
@@ -680,7 +681,7 @@ export function AuthPage({ audience, mode }) {
           )}
           {isRestaurant && (
             <p className="auth-switch customer-switch">
-              Looking for a meal? <Link to="/customer/login">Customer sign in</Link>
+              Looking for something else? <Link to="/customer/login">Customer sign in</Link>
             </p>
           )}
         </section>
@@ -729,6 +730,7 @@ function CustomerDashboard({ section = "discover" }) {
   const [cancellingOrderId, setCancellingOrderId] = useState("");
   const [locationQuery, setLocationQuery] = useState("");
   const [submittedLocation, setSubmittedLocation] = useState("");
+  const [menuCategory, setMenuCategory] = useState("all");
   const [profile, setProfile] = useState({
     full_name: "",
     phone: "",
@@ -745,9 +747,9 @@ function CustomerDashboard({ section = "discover" }) {
   const [passwordStatus, setPasswordStatus] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const sections = {
-    discover: ["DISCOVER", "A taste of your neighborhood", "Find local kitchens and dishes worth coming back for."],
+    discover: ["DISCOVER", "Find what fits your day", "Explore useful finds from trusted local sellers."],
     orders: ["YOUR ORDERS", "Order history", "Keep track of your requests. Delivery workflows are coming soon."],
-    favorites: ["SAVED FOR LATER", "Your favorites", "The restaurants and dishes you want to remember."],
+    favorites: ["SAVED FOR LATER", "Your favorites", "The sellers and finds you want to remember."],
     profile: ["YOUR ACCOUNT", "Profile & preferences", "Keep your contact and delivery details up to date."],
   };
   const activeSection = sections[section] ? section : "discover";
@@ -940,7 +942,7 @@ function CustomerDashboard({ section = "discover" }) {
     setOrderError("");
     setOrderStatus("");
     if (cartRestaurantId && cartRestaurantId !== restaurantId) {
-      setOrderError("Order requests can include dishes from one restaurant at a time. Clear your current request to choose another restaurant.");
+      setOrderError("Order requests can include items from one seller at a time. Clear your current request to choose another seller.");
       return;
     }
     setCartRestaurantId(restaurantId);
@@ -980,7 +982,7 @@ function CustomerDashboard({ section = "discover" }) {
     setOrderError("");
     setOrderStatus("");
     if (!orderCart.length || !cartRestaurantId) {
-      setOrderError("Add at least one dish to your order request.");
+      setOrderError("Add at least one item to your request.");
       return;
     }
     setOrderSubmitting(true);
@@ -998,7 +1000,7 @@ function CustomerDashboard({ section = "discover" }) {
       }
       clearOrderCart();
       setOrderNote("");
-      setOrderStatus(`Order request ${String(data).slice(0, 8).toUpperCase()} was sent to the restaurant. They’ll contact you to confirm availability, payment, and delivery.`);
+      setOrderStatus(`Request ${String(data).slice(0, 8).toUpperCase()} was sent to the seller. They’ll contact you to confirm availability, payment, and delivery.`);
     } catch (error) {
       setOrderError(error.message || "Couldn’t send your order request.");
     } finally {
@@ -1038,6 +1040,18 @@ function CustomerDashboard({ section = "discover" }) {
           .some((value) => value?.toLocaleLowerCase().includes(query)),
       );
   });
+  const visibleRestaurantIds = new Set(visibleRestaurants.map((restaurant) => restaurant.id));
+  const visibleMenuOffers = menuOffers.filter((item) =>
+    visibleRestaurantIds.has(item.restaurants.id)
+    && (menuCategory === "all" || (item.category || "Other") === menuCategory),
+  );
+  const menuCategories = [
+    { id: "all", label: "Everything" },
+    ...[...new Set(menuOffers.map((item) => item.category || "Other"))].map((category) => ({
+      id: category,
+      label: category,
+    })),
+  ];
 
   return (
     <PortalFrame>
@@ -1046,17 +1060,17 @@ function CustomerDashboard({ section = "discover" }) {
         <>
           <section className="customer-welcome-panel">
             <div>
-              <span className="portal-panel-kicker">MADE FOR YOUR NEIGHBORHOOD</span>
-              <h2>Find something delicious nearby.</h2>
-              <p>Local restaurants and their menus will show up here when they join QuickCrave.</p>
+              <span className="portal-panel-kicker">GOOD FINDS, CLOSE TO HOME</span>
+              <h2>Find something that fits your day.</h2>
+              <p>Explore useful finds from local sellers in one place.</p>
               <form className="location-search" role="search" onSubmit={(event) => {
                 event.preventDefault();
                 setSubmittedLocation(locationQuery.trim());
               }}>
                 <span aria-hidden="true">⌖</span>
                 <input
-                  aria-label="Search restaurants, dishes, or neighborhoods"
-                  placeholder="Restaurant, dish, or neighborhood"
+                  aria-label="Search listings, sellers, or neighborhoods"
+                  placeholder="Search listings, sellers, or neighborhoods"
                   value={locationQuery}
                   onChange={(event) => setLocationQuery(event.target.value)}
                 />
@@ -1067,8 +1081,8 @@ function CustomerDashboard({ section = "discover" }) {
           </section>
           <div className="dashboard-section-heading">
             <div>
-              <h2>{submittedLocation ? "Search results" : "Explore local favorites"}</h2>
-              <p>{restaurantsLoading ? "Finding restaurants and menus…" : `${visibleRestaurants.length} ${visibleRestaurants.length === 1 ? "restaurant" : "restaurants"}${submittedLocation ? ` matching “${submittedLocation}”` : " to explore"}.`}</p>
+              <h2>{submittedLocation ? "Search results" : "Explore the collection"}</h2>
+              <p>{restaurantsLoading ? "Finding listings…" : `${visibleMenuOffers.length} ${visibleMenuOffers.length === 1 ? "listing" : "listings"}${submittedLocation ? ` matching “${submittedLocation}”` : " to explore"}.`}</p>
             </div>
             {submittedLocation && (
               <button
@@ -1084,86 +1098,93 @@ function CustomerDashboard({ section = "discover" }) {
             )}
           </div>
           {restaurantsLoading ? (
-            <LoadingState label="Finding restaurants" />
+            <LoadingState label="Finding listings" />
           ) : restaurantsError ? (
             <div className="dashboard-error" role="alert">
-              <p>Couldn’t load restaurants: {restaurantsError}</p>
+              <p>Couldn’t load listings: {restaurantsError}</p>
               <button className="secondary-button" type="button" onClick={() => setRestaurantsReloadKey((key) => key + 1)}>Try again</button>
             </div>
-          ) : visibleRestaurants.length === 0 ? (
-            <EmptyState
-              icon="⌕"
-              title={restaurants.length === 0 ? "No restaurants are listed yet" : "No restaurants found in that area"}
-              text={restaurants.length === 0 ? "Check back as neighborhood restaurants join QuickCrave." : "Try another restaurant, dish, or neighborhood."}
-              action={restaurants.length > 0 && (
-                <button
-                  className="secondary-button"
-                  type="button"
-                  onClick={() => {
-                    setLocationQuery("");
-                    setSubmittedLocation("");
-                  }}
-                >
-                  Clear search
-                </button>
-              )}
-            />
           ) : (
-            <div className="restaurant-feed-grid">
-              {visibleRestaurants.map((restaurant) => (
-                <article className="restaurant-feed-card" key={restaurant.id}>
-                  <span className="restaurant-feed-art" aria-hidden="true">✦</span>
-                  <div>
-                    <h3>{restaurant.name}</h3>
-                    <p>{restaurant.location || "Neighborhood restaurant"}</p>
-                    <small>{restaurant.opening_hours || "Hours available from restaurant"}</small>
-                    <ul className="restaurant-menu-preview">
-                      {menuOffers
-                        .filter((item) => item.restaurants.id === restaurant.id)
-                        .map((item) => (
-                          <li key={item.id}>
-                            {item.image_url
-                              ? <img className="meal-thumbnail" src={item.image_url} alt={item.name} loading="lazy" />
-                              : <span className="meal-thumbnail meal-thumbnail-placeholder" aria-hidden="true">✦</span>}
-                            <span className="restaurant-menu-item-details"><strong>{item.name}</strong><small>{item.description || item.category}</small></span>
-                            <strong>{priceFormatter.format(Number(item.price))}</strong>
-                            <span className="order-item-control">
-                              {orderCart.some((selected) => selected.id === item.id) ? (
-                                <>
-                                  <button type="button" aria-label={`Remove one ${item.name}`} onClick={() => changeOrderQuantity(item.id, -1)}>−</button>
-                                  <span>{orderCart.find((selected) => selected.id === item.id)?.quantity}</span>
-                                  <button type="button" aria-label={`Add one ${item.name}`} disabled={orderCart.find((selected) => selected.id === item.id)?.quantity >= 20} onClick={() => addToOrder(item, restaurant.id)}>+</button>
-                                </>
-                              ) : (
-                                <button
-                                  type="button"
-                                  disabled={Boolean(cartRestaurantId && cartRestaurantId !== restaurant.id)}
-                                  onClick={() => addToOrder(item, restaurant.id)}
-                                >
-                                  Add
-                                </button>
-                              )}
-                            </span>
-                          </li>
-                        ))}
-                    </ul>
-                    {menuOffers.some((item) => item.restaurants.id === restaurant.id) && (
-                      <p className="feed-order-note">Prices and availability are confirmed by the restaurant after you send a request.</p>
-                    )}
-                    {!menuOffers.some((item) => item.restaurants.id === restaurant.id) && (
-                      <p className="feed-order-note">No available dishes are listed yet.</p>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
+            <>
+              <div className="customer-menu-filters" role="group" aria-label="Filter listings by category">
+                {menuCategories.map((item) => (
+                  <button
+                    className={`feed-filter${menuCategory === item.id ? " is-selected" : ""}`}
+                    type="button"
+                    key={item.id}
+                    aria-pressed={menuCategory === item.id}
+                    onClick={() => setMenuCategory(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              {visibleMenuOffers.length === 0 ? (
+                <EmptyState
+                  icon="⌕"
+                  title={menuOffers.length === 0 ? "No listings yet" : "No listings found"}
+                  text={menuOffers.length === 0 ? "Check back as local sellers join QuickCrave." : "Try another search or product category."}
+                  action={(submittedLocation || menuCategory !== "all") && (
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() => {
+                        setLocationQuery("");
+                        setSubmittedLocation("");
+                        setMenuCategory("all");
+                      }}
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                />
+              ) : (
+                <div className="market-product-grid">
+                  {visibleMenuOffers.map((item) => (
+                    <article className="market-product-card" key={item.id}>
+                      <div className="market-product-image">
+                        {item.image_url
+                          ? <img src={item.image_url} alt={item.name} loading="lazy" />
+                          : <span aria-hidden="true">✦</span>}
+                      </div>
+                      <div className="market-product-body">
+                        <p className="market-product-seller">{item.category || "Everyday essentials"} <span aria-hidden="true">·</span> {item.restaurants.name}</p>
+                        <h3>{item.name}</h3>
+                        {item.description && <p className="market-product-description">{item.description}</p>}
+                        <div className="market-product-footer">
+                          <strong>{priceFormatter.format(Number(item.price))}</strong>
+                          <span className="order-item-control">
+                            {orderCart.some((selected) => selected.id === item.id) ? (
+                              <>
+                                <button type="button" aria-label={`Remove one ${item.name}`} onClick={() => changeOrderQuantity(item.id, -1)}>−</button>
+                                <span>{orderCart.find((selected) => selected.id === item.id)?.quantity}</span>
+                                <button type="button" aria-label={`Add one ${item.name}`} disabled={orderCart.find((selected) => selected.id === item.id)?.quantity >= 20} onClick={() => addToOrder(item, item.restaurants.id)}>+</button>
+                              </>
+                            ) : (
+                              <button
+                                className="market-product-add"
+                                type="button"
+                                disabled={Boolean(cartRestaurantId && cartRestaurantId !== item.restaurants.id)}
+                                onClick={() => addToOrder(item, item.restaurants.id)}
+                              >
+                                Add to request
+                              </button>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
           )}
           {orderCart.length > 0 && (
             <form className="portal-card order-request-form" onSubmit={submitOrderRequest}>
               <div className="card-title-row">
                 <div>
                   <h2>Send your order request</h2>
-                  <p>{orderCart[0].restaurants.name} · Payment and delivery are arranged directly with the restaurant.</p>
+                  <p>{orderCart[0].restaurants.name} · Payment and delivery are arranged directly with the seller.</p>
                 </div>
                 <button className="menu-cancel-button" type="button" onClick={clearOrderCart}>Clear request</button>
               </div>
@@ -1188,7 +1209,7 @@ function CustomerDashboard({ section = "discover" }) {
                 <label>Your name<input value={profile.full_name} onChange={(event) => setProfile({ ...profile, full_name: event.target.value })} autoComplete="name" required maxLength={120} /></label>
                 <label>Phone number<input type="tel" value={profile.phone} onChange={(event) => setProfile({ ...profile, phone: event.target.value })} autoComplete="tel" required maxLength={40} /></label>
                 <label className="profile-address-field">Delivery address<input value={profile.delivery_address} onChange={(event) => setProfile({ ...profile, delivery_address: event.target.value })} autoComplete="street-address" required maxLength={500} /></label>
-                <label className="profile-address-field">Note for the restaurant<textarea value={orderNote} onChange={(event) => setOrderNote(event.target.value)} maxLength={1000} rows={3} placeholder="Optional delivery or meal notes" /></label>
+                <label className="profile-address-field">Note for the seller<textarea value={orderNote} onChange={(event) => setOrderNote(event.target.value)} maxLength={1000} rows={3} placeholder="Optional delivery or order notes" /></label>
               </div>
               {orderError && <p className="auth-error" role="alert">{orderError}</p>}
               <button className="hero-primary-button profile-save" type="submit" disabled={orderSubmitting}>
@@ -1215,9 +1236,9 @@ function CustomerDashboard({ section = "discover" }) {
         ) : customerOrders.length === 0 ? (
           <EmptyState
             icon="▤"
-            title="Your next great meal starts here"
-            text="Once you send a request to a restaurant, you can follow its status and find the details here."
-            action={<Link className="hero-primary-button" to="/customer/dashboard">Explore restaurants <span aria-hidden="true">→</span></Link>}
+            title="Your next good find starts here"
+            text="Once you send a request to a seller, you can follow its status and find the details here."
+            action={<Link className="hero-primary-button" to="/customer/dashboard">Explore listings <span aria-hidden="true">→</span></Link>}
           />
         ) : (
           <div className="order-request-list">
@@ -1225,7 +1246,7 @@ function CustomerDashboard({ section = "discover" }) {
               <article className="portal-card order-request-card" key={order.id}>
                 <div className="card-title-row">
                   <div>
-                    <h2>{order.restaurants?.name || "Restaurant order"}</h2>
+                    <h2>{order.restaurants?.name || "Seller request"}</h2>
                     <p>Request {order.id.slice(0, 8).toUpperCase()} · {new Date(order.created_at).toLocaleString()}</p>
                   </div>
                   <span className={`status-pill status-${order.status}`}>{order.status.replaceAll("_", " ")}</span>
@@ -1268,9 +1289,9 @@ function CustomerDashboard({ section = "discover" }) {
       {activeSection === "favorites" && (
         <EmptyState
           icon="♡"
-          title="Keep your go-to dishes close"
-          text="Your saved restaurants and dishes will be easy to find here. Browse the local feed to discover a new favorite."
-          action={<Link className="hero-primary-button" to="/customer/dashboard">Discover restaurants <span aria-hidden="true">→</span></Link>}
+          title="Keep your favorite finds close"
+          text="Your saved sellers and listings will be easy to find here. Browse the collection to discover something new."
+          action={<Link className="hero-primary-button" to="/customer/dashboard">Discover listings <span aria-hidden="true">→</span></Link>}
         />
       )}
       {activeSection === "profile" && (
@@ -1343,7 +1364,7 @@ function RestaurantDashboard({ section = "overview" }) {
   const [dishName, setDishName] = useState("");
   const [dishDescription, setDishDescription] = useState("");
   const [dishPrice, setDishPrice] = useState("");
-  const [dishCategory, setDishCategory] = useState("Main");
+  const [dishCategory, setDishCategory] = useState("General");
   const [dishImage, setDishImage] = useState(null);
   const [editingItemId, setEditingItemId] = useState("");
   const [settingsStatus, setSettingsStatus] = useState("");
@@ -1378,7 +1399,7 @@ function RestaurantDashboard({ section = "overview" }) {
         return;
       }
       if (!membership) {
-        setRestaurantError("No restaurant workspace is linked to this account.");
+        setRestaurantError("No business workspace is linked to this account.");
         setRestaurantLoading(false);
         setOrderInboxLoading(false);
         setMenuLoading(false);
@@ -1510,7 +1531,7 @@ function RestaurantDashboard({ section = "overview" }) {
     try {
       await persistMenuItem(event);
     } catch (error) {
-      setMenuError(error.message || "Couldn’t save this menu item.");
+      setMenuError(error.message || "Couldn’t save this listing.");
     } finally {
       setMenuSaving(false);
     }
@@ -1537,7 +1558,7 @@ function RestaurantDashboard({ section = "overview" }) {
           .from("menu-images")
           .upload(nextImagePath, dishImage, { contentType: dishImage.type, upsert: false });
         if (uploadError) {
-          setMenuError(`Couldn’t upload the dish photo: ${uploadError.message}`);
+          setMenuError(`Couldn’t upload the listing image: ${uploadError.message}`);
           return;
         }
         nextImageUrl = supabase.storage.from("menu-images").getPublicUrl(nextImagePath).data.publicUrl;
@@ -1581,7 +1602,7 @@ function RestaurantDashboard({ section = "overview" }) {
         .from("menu-images")
         .upload(imagePath, dishImage, { contentType: dishImage.type, upsert: false });
       if (uploadError) {
-        setMenuError(`Couldn’t upload the dish photo: ${uploadError.message}`);
+        setMenuError(`Couldn’t upload the listing image: ${uploadError.message}`);
         return;
       }
       imageUrl = supabase.storage.from("menu-images").getPublicUrl(imagePath).data.publicUrl;
@@ -1611,7 +1632,7 @@ function RestaurantDashboard({ section = "overview" }) {
     setDishName("");
     setDishDescription("");
     setDishPrice("");
-    setDishCategory("Main");
+    setDishCategory("General");
     setDishImage(null);
     setEditingItemId("");
     const imageInput = document.querySelector("#menu-image");
@@ -1623,7 +1644,7 @@ function RestaurantDashboard({ section = "overview" }) {
     setDishName(item.name);
     setDishDescription(item.description ?? "");
     setDishPrice(String(item.price));
-    setDishCategory(item.category ?? "Main");
+    setDishCategory(item.category ?? "General");
     setDishImage(null);
   }
 
@@ -1643,7 +1664,7 @@ function RestaurantDashboard({ section = "overview" }) {
       }
       setMenuItems((current) => current.map((entry) => entry.id === item.id ? data : entry));
     } catch (error) {
-      setMenuError(error.message || "Couldn’t update menu availability.");
+      setMenuError(error.message || "Couldn’t update listing availability.");
     } finally {
       setMenuActionId("");
     }
@@ -1667,7 +1688,7 @@ function RestaurantDashboard({ section = "overview" }) {
         }
       }
     } catch (error) {
-      setMenuError(error.message || "Couldn’t remove this menu item.");
+      setMenuError(error.message || "Couldn’t remove this listing.");
     } finally {
       setMenuActionId("");
     }
@@ -1679,7 +1700,7 @@ function RestaurantDashboard({ section = "overview" }) {
     try {
       await persistRestaurantSettings();
     } catch (error) {
-      setSettingsError(error.message || "Couldn’t save restaurant details.");
+      setSettingsError(error.message || "Couldn’t save business details.");
     } finally {
       setSettingsSaving(false);
     }
@@ -1717,7 +1738,7 @@ function RestaurantDashboard({ section = "overview" }) {
       setSettingsError(`Restaurant profile was saved, but contact details were not: ${contactError.message}`);
       return;
     }
-    setSettingsStatus("Restaurant details have been saved.");
+    setSettingsStatus("Business details have been saved.");
   }
 
   async function updateRestaurantOrder(orderId, status) {
@@ -1743,17 +1764,17 @@ function RestaurantDashboard({ section = "overview" }) {
   }
 
   const headers = {
-    overview: ["RESTAURANT WORKSPACE", "Good morning", "Here’s what’s happening with your restaurant today."],
-    orders: ["ORDER MANAGEMENT", "Incoming orders", "Review customer requests and keep your team in sync."],
-    menu: ["YOUR MENU", "Menu management", "Add dishes and keep your menu ready for customers."],
-    settings: ["RESTAURANT PROFILE", "Business settings", "Manage your restaurant details and operating preferences."],
+    overview: ["BUSINESS WORKSPACE", "Good morning", "Here’s what’s happening with your business today."],
+    orders: ["REQUEST MANAGEMENT", "Incoming requests", "Review customer requests and keep your team in sync."],
+    menu: ["YOUR CATALOG", "Catalog management", "Add listings and keep your catalog up to date."],
+    settings: ["BUSINESS PROFILE", "Business settings", "Manage your business details and operating preferences."],
   };
   const activeSection = headers[section] ? section : "overview";
   const heading = headers[activeSection];
 
   return (
     <PortalFrame audience="restaurant">
-      {restaurantLoading && <ServiceStatus><LoadingIndicator label="Loading your restaurant workspace" /></ServiceStatus>}
+      {restaurantLoading && <ServiceStatus><LoadingIndicator label="Loading your business workspace" /></ServiceStatus>}
       {restaurantError && (
         <div className="dashboard-error" role="alert">
           <p>{restaurantError}</p>
@@ -1769,16 +1790,16 @@ function RestaurantDashboard({ section = "overview" }) {
       {activeSection === "overview" && (
         <>
           <section className="restaurant-setup-panel">
-            <div className="setup-icon" aria-hidden="true">R</div>
+            <div className="setup-icon" aria-hidden="true">B</div>
             <div>
-              <span className="portal-panel-kicker">{restaurant?.status === "approved" ? "YOUR RESTAURANT IS LIVE" : "GET YOUR RESTAURANT READY"}</span>
-              <h2>{restaurant?.name || "Set up your restaurant workspace"}</h2>
+              <span className="portal-panel-kicker">{restaurant?.status === "approved" ? "YOUR BUSINESS IS LIVE" : "GET YOUR BUSINESS READY"}</span>
+              <h2>{restaurant?.name || "Set up your business workspace"}</h2>
               <p>
                 {restaurant?.status === "approved"
-                  ? "Keep your details and menu up to date so customers can find you and request their favorites."
+                  ? "Keep your details and catalog up to date so customers can find your listings and send requests."
                   : restaurant?.status === "pending"
-                    ? "Your profile is awaiting review. You can prepare your menu while QuickCrave reviews your restaurant."
-                    : "Complete your profile and prepare your menu before your restaurant goes live."}
+                    ? "Your profile is awaiting review. You can prepare your catalog while QuickCrave reviews your business."
+                    : "Complete your profile and prepare your catalog before your business goes live."}
               </p>
             </div>
             <Link className="text-arrow-link" to="/restaurant/dashboard/settings">
@@ -1793,13 +1814,13 @@ function RestaurantDashboard({ section = "overview" }) {
               icon="▤"
             />
             <MetricCard
-              label="Available dishes"
+              label="Available listings"
               value={menuLoading ? "…" : String(menuItems.filter((item) => item.is_available).length)}
-              detail={menuLoading ? "Loading your menu" : `${menuItems.length} total menu ${menuItems.length === 1 ? "item" : "items"}`}
+              detail={menuLoading ? "Loading your catalog" : `${menuItems.length} total ${menuItems.length === 1 ? "listing" : "listings"}`}
               icon="☷"
             />
             <MetricCard
-              label="Restaurant status"
+              label="Business status"
               value={restaurant?.status ?? "—"}
               detail={restaurant?.location || "Complete your profile"}
               icon="◷"
@@ -1824,10 +1845,10 @@ function RestaurantDashboard({ section = "overview" }) {
                 icon="✓"
                 title="You’re all caught up"
                 text={restaurant?.status === "approved"
-                  ? "New customer requests will appear here. Make sure your menu is current and your dishes are available."
-                  : "Your restaurant must be approved before customers can submit requests."}
+                  ? "New customer requests will appear here. Make sure your catalog is current and listings are available."
+                  : "Your business must be approved before customers can submit requests."}
                 action={restaurant?.status === "approved"
-                  ? <Link className="secondary-button" to="/restaurant/dashboard/menu">Review your menu</Link>
+                  ? <Link className="secondary-button" to="/restaurant/dashboard/menu">Review your catalog</Link>
                   : null}
               />
             ) : (
@@ -1877,7 +1898,7 @@ function RestaurantDashboard({ section = "overview" }) {
           )}
           {orderInboxNotice && <p className="editor-warning" role="status">{orderInboxNotice}</p>}
           {restaurant?.status !== "approved" ? (
-            <EmptyState icon="◷" title="Your restaurant is not approved yet" text="You can review existing requests, but customers can only submit orders to approved restaurants." />
+            <EmptyState icon="◷" title="Your business is not approved yet" text="You can review existing requests, but customers can only send requests to approved sellers." />
           ) : orderInboxLoading ? (
             <LoadingState label="Checking for customer requests" rows={2} />
           ) : restaurantOrders.length === 0 ? (
@@ -1947,14 +1968,14 @@ function RestaurantDashboard({ section = "overview" }) {
       {activeSection === "menu" && (
         <>
           <section className="portal-card menu-editor-card">
-            <div className="card-title-row"><div><h2>Add a menu item</h2><p>Add the dish details customers need to make a choice.</p></div><span className="status-pill">Dietary &amp; allergen info: coming soon</span></div>
-            {restaurantRole !== "owner" && <p className="editor-warning">Only restaurant owners can edit the menu right now.</p>}
+            <div className="card-title-row"><div><h2>Add a listing</h2><p>Add the details customers need to make a choice.</p></div><span className="status-pill">Additional details: coming soon</span></div>
+            {restaurantRole !== "owner" && <p className="editor-warning">Only business owners can edit the catalog right now.</p>}
             <form className="menu-editor-form" onSubmit={addMenuItem}>
-              <label>Dish name<input value={dishName} onChange={(event) => setDishName(event.target.value)} placeholder="e.g. House special" required /></label>
+              <label>Listing name<input value={dishName} onChange={(event) => setDishName(event.target.value)} placeholder="Name your listing" required /></label>
               <label>Description<input value={dishDescription} onChange={(event) => setDishDescription(event.target.value)} placeholder="A short description" /></label>
-              <label>Category<select value={dishCategory} onChange={(event) => setDishCategory(event.target.value)}><option>Main</option><option>Starter</option><option>Dessert</option><option>Drinks</option><option>Side</option></select></label>
+              <label>Category<input value={dishCategory} onChange={(event) => setDishCategory(event.target.value)} placeholder="Category" maxLength={60} required /></label>
               <label>Price<input type="number" min="0.01" step="0.01" value={dishPrice} onChange={(event) => setDishPrice(event.target.value)} placeholder="0.00" required /></label>
-              <label className="menu-image-field">Dish photo{editingItemId && " (optional replacement)"}<input id="menu-image" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => {
+              <label className="menu-image-field">Listing image{editingItemId && " (optional replacement)"}<input id="menu-image" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => {
                 const file = event.target.files?.[0] ?? null;
                 if (file && file.size > 5 * 1024 * 1024) {
                   setMenuError("Choose an image smaller than 5 MB.");
@@ -1969,19 +1990,19 @@ function RestaurantDashboard({ section = "overview" }) {
               </button>
               {editingItemId && <button className="menu-cancel-button" type="button" disabled={menuSaving} onClick={resetMenuForm}>Cancel</button>}
             </form>
-            <p className="editor-warning">Photos: JPEG, PNG, or WebP up to 5 MB. Dietary and allergen fields are coming soon.</p>
+            <p className="editor-warning">Images: JPEG, PNG, or WebP up to 5 MB. Additional listing fields are coming soon.</p>
           </section>
           <section className="portal-card menu-list-card">
-            <div className="card-title-row"><div><h2>Menu items</h2><p>{menuItems.length} {menuItems.length === 1 ? "item" : "items"}</p></div></div>
+            <div className="card-title-row"><div><h2>Catalog listings</h2><p>{menuItems.length} {menuItems.length === 1 ? "item" : "items"}</p></div></div>
             {menuLoading ? (
-              <LoadingState label="Loading your menu" rows={3} />
+              <LoadingState label="Loading your catalog" rows={3} />
             ) : menuError ? (
               <div className="dashboard-error" role="alert">
                 <p>{menuError}</p>
                 <button className="secondary-button" type="button" onClick={() => setWorkspaceReloadKey((key) => key + 1)}>Try again</button>
               </div>
             ) : menuItems.length === 0 ? (
-              <EmptyState icon="☷" title="Your menu is waiting" text="Add a dish above to start shaping your restaurant menu." />
+              <EmptyState icon="☷" title="Your catalog is waiting" text="Add a listing above to get started." />
             ) : (
               <ul className="editable-menu-list">
                 {menuItems.map((item) => (
@@ -2009,12 +2030,12 @@ function RestaurantDashboard({ section = "overview" }) {
           className="portal-card profile-form"
           onSubmit={saveRestaurantSettings}
         >
-          <div className="card-title-row"><div><h2>Restaurant details</h2><p>Keep your public profile and contact channels current.</p></div></div>
-          {restaurantLoading && <LoadingIndicator label="Loading restaurant details" />}
+          <div className="card-title-row"><div><h2>Business details</h2><p>Keep your public profile and contact channels current.</p></div></div>
+          {restaurantLoading && <LoadingIndicator label="Loading business details" />}
           {settingsError && <p className="auth-error" role="alert">{settingsError}</p>}
           {restaurant?.status !== "approved" && <p className="editor-warning">Your restaurant is not public until QuickCrave approves its profile.</p>}
           <div className="profile-fields">
-            <label>Restaurant name<input name="name" value={settingsForm.name} onChange={(event) => setSettingsForm({ ...settingsForm, name: event.target.value })} required /></label>
+            <label>Business name<input name="name" value={settingsForm.name} onChange={(event) => setSettingsForm({ ...settingsForm, name: event.target.value })} required /></label>
             <label>Contact email<input name="contact_email" type="email" value={settingsForm.contact_email} onChange={(event) => setSettingsForm({ ...settingsForm, contact_email: event.target.value })} required /></label>
             <label>Phone number<input name="phone" type="tel" value={settingsForm.phone} onChange={(event) => setSettingsForm({ ...settingsForm, phone: event.target.value })} /></label>
             <label>WhatsApp number<input name="whatsapp" type="tel" value={settingsForm.whatsapp} onChange={(event) => setSettingsForm({ ...settingsForm, whatsapp: event.target.value })} /></label>
@@ -2022,7 +2043,7 @@ function RestaurantDashboard({ section = "overview" }) {
             <label>Opening hours<input name="opening_hours" value={settingsForm.opening_hours} onChange={(event) => setSettingsForm({ ...settingsForm, opening_hours: event.target.value })} /></label>
           </div>
           <button className="hero-primary-button profile-save" type="submit" disabled={restaurantLoading || restaurantRole !== "owner" || settingsSaving}>
-            {settingsSaving ? <LoadingIndicator label="Saving restaurant details" /> : <>Save changes <span aria-hidden="true">→</span></>}
+            {settingsSaving ? <LoadingIndicator label="Saving business details" /> : <>Save changes <span aria-hidden="true">→</span></>}
           </button>
           {settingsStatus && <p className="profile-status" role="status">{settingsStatus}</p>}
           <div className="settings-checklist">
@@ -2198,8 +2219,8 @@ function AdminDashboard() {
     <PortalFrame audience="admin">
       <DashboardHeader
         eyebrow="MARKETPLACE ADMINISTRATION"
-        title="Restaurant review"
-        description="Review restaurant registrations and manage their marketplace approval."
+        title="Seller review"
+        description="Review seller registrations and manage their marketplace approval."
         action={loading
           ? <LoadingIndicator label="Loading applications" />
           : <span className="status-pill">{loadError ? "Unavailable" : `${pendingCount} pending`}</span>}
@@ -2212,8 +2233,8 @@ function AdminDashboard() {
       {statusMessage && <p className="profile-status" role="status">{statusMessage}</p>}
       <div className="admin-overview-metrics">
         <MetricCard label="Awaiting review" value={loading ? "…" : loadError ? "—" : String(pendingCount)} detail="Applications to check" icon="◷" />
-        <MetricCard label="Approved" value={loading ? "…" : loadError ? "—" : String(approvedCount)} detail="Restaurants listed" icon="✓" />
-        <MetricCard label="Total restaurants" value={loading ? "…" : loadError ? "—" : String(restaurants.length)} detail="Across all statuses" icon="▤" />
+        <MetricCard label="Approved" value={loading ? "…" : loadError ? "—" : String(approvedCount)} detail="Sellers listed" icon="✓" />
+        <MetricCard label="Total sellers" value={loading ? "…" : loadError ? "—" : String(restaurants.length)} detail="Across all statuses" icon="▤" />
       </div>
       <section className="portal-card admin-review-card">
         <div className="card-title-row">
@@ -2223,19 +2244,19 @@ function AdminDashboard() {
               <span className="visually-hidden">Search restaurant applications</span>
               <input
                 type="search"
-                placeholder="Search restaurants"
+                placeholder="Search sellers"
                 value={restaurantSearch}
                 onChange={(event) => setRestaurantSearch(event.target.value)}
               />
             </label>
             <label className="admin-filter">
-              <span className="visually-hidden">Filter restaurants</span>
+              <span className="visually-hidden">Filter sellers</span>
               <select value={filter} onChange={(event) => setFilter(event.target.value)}>
                 <option value="pending">Pending</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
                 <option value="suspended">Suspended</option>
-                <option value="all">All restaurants</option>
+                <option value="all">All sellers</option>
               </select>
             </label>
           </div>
@@ -2250,8 +2271,8 @@ function AdminDashboard() {
         ) : visibleRestaurants.length === 0 ? (
           <EmptyState
             icon="✓"
-            title={restaurantSearch ? "No matching restaurants" : filter === "pending" ? "No applications awaiting review" : "No restaurants in this list"}
-            text={restaurantSearch ? "Try another name, location, email, or phone number." : filter === "pending" ? "New restaurant registrations will appear here." : "Choose another status filter to review restaurants."}
+            title={restaurantSearch ? "No matching sellers" : filter === "pending" ? "No applications awaiting review" : "No sellers in this list"}
+            text={restaurantSearch ? "Try another name, location, email, or phone number." : filter === "pending" ? "New seller registrations will appear here." : "Choose another status filter to review sellers."}
             action={restaurantSearch && (
               <button className="secondary-button" type="button" onClick={() => setRestaurantSearch("")}>Clear search</button>
             )}
@@ -2379,14 +2400,14 @@ export function AdminDashboardPage() {
 export function AccountChoicePage() {
   return (
     <main className="account-choice-page">
-      <header className="auth-topbar"><PortalBrand /><HomeLink label="Back to homepage" /></header>
+      <header className="auth-topbar"><PortalBrand /><div className="auth-topbar-actions"><ThemeToggle /><HomeLink label="Back to homepage" /></div></header>
       <div className="account-choice-content">
         <p className="section-eyebrow">WELCOME TO QUICKCRAVE</p>
         <h1>How would you like to use QuickCrave?</h1>
         <p>Choose the account that fits you. You can always come back to this page.</p>
         <div className="account-choice-grid">
-          <article><span className="choice-icon">♡</span><h2>Find food nearby</h2><p>Discover local restaurants, save dishes, and keep up with your orders.</p><div><Link className="hero-primary-button" to="/customer/signup">Create customer account <span aria-hidden="true">→</span></Link><Link className="choice-secondary" to="/customer/login">Customer sign in</Link></div></article>
-          <article><span className="choice-icon restaurant-choice">⌂</span><h2>Run a restaurant</h2><p>Set up your restaurant, manage your menu, and coordinate incoming requests.</p><div><Link className="hero-primary-button" to="/restaurant/signup">Register restaurant <span aria-hidden="true">→</span></Link><Link className="choice-secondary" to="/restaurant/login">Restaurant sign in</Link></div></article>
+          <article><span className="choice-icon">♡</span><h2>Explore the collection</h2><p>Discover local listings, save your favorites, and keep up with your requests.</p><div><Link className="hero-primary-button" to="/customer/signup">Create customer account <span aria-hidden="true">→</span></Link><Link className="choice-secondary" to="/customer/login">Customer sign in</Link></div></article>
+          <article><span className="choice-icon restaurant-choice">⌂</span><h2>Run a business</h2><p>Set up your business, manage your catalog, and coordinate incoming requests.</p><div><Link className="hero-primary-button" to="/restaurant/signup">Register business <span aria-hidden="true">→</span></Link><Link className="choice-secondary" to="/restaurant/login">Business sign in</Link></div></article>
         </div>
       </div>
     </main>

@@ -1934,7 +1934,8 @@
   }
 }
 
-:root {
+@scope (html[data-theme="dark"]) {
+:scope {
   --portal-ink: #29241f;
   --portal-muted: #81776e;
   --portal-line: #eee7df;
@@ -3450,4 +3451,545 @@
   .loading-state-row {
     animation: none;
   }
+}
+
+:root {
+  --portal-ink: #eff1eb;
+  --portal-muted: #a3aaa1;
+  --portal-line: #303630;
+  --portal-surface: #1a1f1b;
+  --portal-orange: #ef7947;
+  --portal-orange-soft: #30221b;
+  --portal-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+}
+
+.auth-page,
+.account-choice-page {
+  color: #eff1eb;
+  background:
+    radial-gradient(ellipse at 18% 20%, rgba(119, 78, 48, 0.2), transparent 40%),
+    #101310;
+}
+
+.auth-topbar {
+  border-color: #303630;
+}
+
+.portal-page {
+  color: #eff1eb;
+  background:
+    radial-gradient(ellipse at 86% 7%, rgba(75, 87, 67, 0.13), transparent 32rem),
+    #101310;
+}
+
+.portal-topbar {
+  border-color: #303630;
+  background: rgba(18, 22, 19, 0.94);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.2);
+}
+
+.portal-sidebar {
+  border-color: #303630;
+  background: rgba(22, 27, 23, 0.92);
+}
+
+.portal-sidebar-heading,
+.portal-sidebar-footer,
+.dashboard-heading {
+  border-color: #303630;
+}
+
+.portal-account-label,
+.portal-signout,
+.portal-home-link,
+.portal-nav-link,
+.portal-sidebar-toggle {
+  border-color: #353b35;
+  background: #1a1f1b;
+  color: #b7bdb5;
+}
+
+.portal-nav-link:hover,
+.portal-nav-link.is-active {
+  border-color: #65412e;
+  background: #2a211c;
+  color: #ff9a69;
+}
+
+.portal-nav-link.is-active > span,
+.portal-sidebar-footer a,
+.portal-text-link,
+.auth-switch a,
+.choice-secondary,
+.text-arrow-link,
+.restaurant-more-requests {
+  color: #ff9a69;
+}
+
+.portal-signout:hover,
+.portal-home-link:hover {
+  border-color: #65412e;
+  background: #2a211c;
+  color: #ff9a69;
+}
+
+.portal-user-email,
+.portal-account-label,
+.portal-sidebar-heading div span,
+.portal-sidebar-footer p,
+.dashboard-heading > div > p:last-child,
+.dashboard-section-heading p,
+.customer-welcome-panel p,
+.restaurant-setup-panel p,
+.restaurant-feed-card p,
+.restaurant-feed-card > div > small,
+.restaurant-menu-preview li > span small,
+.market-product-description,
+.market-product-seller,
+.metric-card p,
+.metric-card small,
+.portal-card .card-title-row p,
+.admin-restaurant-details p,
+.admin-restaurant-details small,
+.menu-editor-form label,
+.profile-fields label,
+.loading-state-label {
+  color: #a3aaa1;
+}
+
+.dashboard-heading h1,
+.customer-welcome-panel h2,
+.restaurant-setup-panel h2,
+.restaurant-feed-card h3,
+.metric-card > strong,
+.portal-card h2,
+.portal-card h3,
+.admin-restaurant-title h3,
+.admin-restaurant-details,
+.restaurant-attention-item h3,
+.restaurant-attention-item > strong,
+.account-choice-grid h2,
+.auth-story h1,
+.account-choice-content h1,
+.auth-card-heading h2 {
+  color: #eff1eb;
+}
+
+.customer-welcome-panel,
+.restaurant-setup-panel,
+.restaurant-order-callout {
+  border-color: #3a4039;
+  background: linear-gradient(120deg, #1d241e, #1a1f1b);
+  box-shadow: var(--portal-shadow);
+}
+
+.restaurant-setup-panel {
+  border-color: #3a4639;
+  background: linear-gradient(120deg, #1d261e, #1a201b);
+}
+
+.auth-card,
+.account-choice-grid article,
+.portal-card,
+.metric-card,
+.restaurant-feed-card,
+.restaurant-order-card,
+.profile-form,
+.account-security-card,
+.menu-editor-card,
+.menu-list-card,
+.admin-review-card,
+.restaurant-command-center,
+.loading-state,
+.empty-state {
+  border-color: #303630;
+  background: #1a1f1b;
+  box-shadow: var(--portal-shadow);
+}
+
+.auth-story > p,
+.account-choice-content > p:not(.section-eyebrow),
+.account-choice-grid article > p,
+.auth-checkbox,
+.auth-switch,
+.auth-card-heading > p:last-child,
+.auth-form label:not(.auth-checkbox),
+.auth-footnote,
+.auth-availability,
+.auth-notice,
+.auth-story-note {
+  color: #a3aaa1;
+}
+
+.auth-story-note > span:first-child,
+.choice-icon,
+.portal-avatar,
+.welcome-illustration,
+.restaurant-feed-art,
+.metric-icon,
+.setup-icon {
+  border-color: #3c423b;
+  background: #262c26;
+  color: #f29a6c;
+}
+
+.choice-icon.restaurant-choice {
+  background: #263026;
+  color: #a4c391;
+}
+
+.auth-form input:not([type="checkbox"]),
+.profile-fields input,
+.profile-fields textarea,
+.menu-editor-form input,
+.menu-editor-form select,
+.admin-filter select,
+.admin-search input,
+.location-search,
+.order-request-form textarea {
+  border-color: #3a413a;
+  background: #111512;
+  color: #eff1eb;
+}
+
+.auth-form input::placeholder,
+.profile-fields input::placeholder,
+.admin-search input::placeholder,
+.location-search input::placeholder {
+  color: #808981;
+}
+
+.auth-form input:focus,
+.profile-fields input:focus,
+.profile-fields textarea:focus,
+.menu-editor-form input:focus,
+.menu-editor-form select:focus,
+.admin-search input:focus {
+  border-color: #df7444;
+  outline-color: rgba(239, 121, 71, 0.22);
+}
+
+.auth-notice,
+.service-status,
+.editor-warning,
+.profile-status,
+.auth-error,
+.dashboard-error {
+  border-color: #51412f;
+  background: #28231b;
+  color: #e2bd82;
+}
+
+.auth-error,
+.dashboard-error {
+  border-color: #573a32;
+  background: #2a201d;
+  color: #f0a08d;
+}
+
+.profile-status {
+  border-color: #344a39;
+  background: #1d2a20;
+  color: #aed0a8;
+}
+
+.status-pill.status-pending,
+.status-pill.status-submitted {
+  border-color: #53442e;
+  background: #2b261b;
+  color: #e4bc7c;
+}
+
+.status-pill.status-approved,
+.status-pill.status-completed {
+  border-color: #3b523c;
+  background: #202b21;
+  color: #abd0a7;
+}
+
+.status-pill.status-rejected,
+.status-pill.status-suspended,
+.status-pill.status-cancelled {
+  border-color: #593a34;
+  background: #2c201e;
+  color: #e9a093;
+}
+
+.feed-filter,
+.secondary-button,
+.menu-cancel-button,
+.menu-item-actions button,
+.order-item-control button,
+.admin-restaurant-actions .secondary-button,
+.portal-sidebar-close {
+  border-color: #3a413a;
+  background: #202621;
+  color: #d3d8d1;
+}
+
+.feed-filter.is-selected {
+  border-color: #ef7947;
+  background: #ef7947;
+  color: #151714;
+}
+
+.restaurant-menu-preview,
+.restaurant-menu-preview li,
+.order-cart-list .order-cart-total,
+.admin-restaurant-list > li,
+.admin-restaurant-details,
+.editable-menu-list li,
+.restaurant-attention-item {
+  border-color: #303630;
+}
+
+.restaurant-menu-preview li,
+.order-cart-list li,
+.order-cart-list li strong,
+.editable-menu-list li,
+.restaurant-command-center {
+  color: #c7cdc5;
+}
+
+.meal-thumbnail,
+.admin-menu-preview-item img,
+.admin-menu-preview-item > span {
+  background: #262d27;
+}
+
+.order-cart-list li strong,
+.order-cart-list .order-cart-total,
+.admin-restaurant-title h3 {
+  color: #eff1eb;
+}
+
+.restaurant-setup-panel .status-pill,
+.restaurant-order-callout .status-pill {
+  color: #d6c69d;
+}
+
+.customer-menu-filters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 0 17px;
+  padding: 2px 1px 6px;
+  scrollbar-width: thin;
+}
+
+.customer-menu-filters .feed-filter {
+  flex: 0 0 auto;
+}
+
+.market-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
+  gap: 15px;
+}
+
+.market-product-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #303630;
+  border-radius: 12px;
+  background: #1a1f1b;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.market-product-card:hover {
+  transform: translateY(-3px);
+  border-color: #555d53;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+}
+
+.market-product-image {
+  display: grid;
+  overflow: hidden;
+  aspect-ratio: 1.22;
+  place-items: center;
+  background: #252c26;
+  color: #e99567;
+  font-size: 2rem;
+}
+
+.market-product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 350ms ease;
+}
+
+.market-product-card:hover .market-product-image img {
+  transform: scale(1.04);
+}
+
+.market-product-body {
+  display: grid;
+  min-height: 170px;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 7px;
+  padding: 13px;
+}
+
+.market-product-seller {
+  overflow: hidden;
+  margin: 0;
+  color: #a3aaa1;
+  font-size: 0.69rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-product-seller span {
+  margin: 0 3px;
+  color: #657067;
+}
+
+.market-product-body h3 {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #eff1eb;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.market-product-description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #a3aaa1;
+  font-size: 0.73rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.market-product-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  margin-top: 5px;
+}
+
+.market-product-footer > strong {
+  flex: 0 0 auto;
+  color: #ff9a69;
+  font-size: 0.91rem;
+}
+
+.market-product-card .order-item-control {
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 5px !important;
+}
+
+.market-product-card .market-product-add {
+  min-height: 35px;
+  padding: 0 9px;
+  border-color: #67432e;
+  background: #30231c;
+  color: #ffad81;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.market-product-card .market-product-add:hover:not(:disabled) {
+  border-color: #ef7947;
+  background: #ef7947;
+  color: #151714;
+}
+
+.market-product-card .market-product-add:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.restaurant-order-callout h2,
+.restaurant-order-callout p,
+.customer-shortcuts strong,
+.customer-shortcuts small,
+.restaurant-attention-item h3,
+.restaurant-attention-item > strong,
+.order-progress,
+.order-terminal-status {
+  color: #d4d9d2;
+}
+
+.order-terminal-status {
+  background: #2b211e;
+}
+
+.portal-sidebar-backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.public-menu-state {
+  border-color: #3a413a;
+  background: #1a1f1b;
+  color: #a3aaa1;
+}
+
+.theme-toggle {
+  border-color: #353b35;
+  background: #1a1f1b;
+  color: #d7ddd4;
+}
+
+.theme-toggle:hover {
+  border-color: #65412e;
+  background: #2a211c;
+  color: #ff9a69;
+}
+
+@media (max-width: 760px) {
+  .portal-sidebar {
+    border-bottom-color: #303630;
+    background: rgba(18, 22, 19, 0.97);
+  }
+
+  .portal-nav-link {
+    border-color: #353b35;
+    background: #1a1f1b;
+  }
+
+  .portal-nav-link.is-active {
+    border-color: #65412e;
+    background: #2a211c;
+  }
+}
+
+@media (max-width: 520px) {
+  .market-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .market-product-body {
+    min-height: 178px;
+    padding: 10px;
+  }
+
+  .market-product-body h3 {
+    font-size: 0.82rem;
+  }
+
+  .market-product-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .market-product-card .order-item-control {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .market-product-card .market-product-add {
+    width: 100%;
+  }
+}
 }
