@@ -88,8 +88,9 @@ Deno.serve(async (request) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!supabaseUrl || !anonKey || !serviceRoleKey) {
     console.error("Customer signup function is missing Supabase server credentials.");
     return Response.json({ error: "Account creation is temporarily unavailable." }, { status: 503, headers });
   }
@@ -115,21 +116,34 @@ Deno.serve(async (request) => {
     return Response.json({ error: "Too many signup attempts. Please wait a little before trying again." }, { status: 429, headers });
   }
 
-  const { error: createError } = await adminClient.auth.admin.createUser({
+  const publicClient = createClient(supabaseUrl, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: signupData, error: signupError } = await publicClient.auth.signUp({
     email,
     password,
-    email_confirm: true,
-    user_metadata: {
-      account_type: "customer",
-      full_name: fullName,
-      phone,
+    options: {
+      emailRedirectTo: `${origin}/customer/login`,
+      data: {
+        account_type: "customer",
+        full_name: fullName,
+        phone,
+      },
     },
   });
 
-  if (createError) {
-    console.error("Customer account creation failed:", createError.message);
+  if (signupError) {
+    console.error("Customer account creation failed:", signupError.message);
     return Response.json({ error: "We couldn’t create an account with those details. Check the email or try signing in." }, { status: 400, headers });
   }
 
-  return Response.json({ success: true }, { status: 201, headers });
+  if (!signupData.user) {
+    console.error("Customer signup did not return a user.");
+    return Response.json({ error: "Account creation is temporarily unavailable." }, { status: 503, headers });
+  }
+
+  return Response.json(
+    { success: true, confirmationRequired: !signupData.session },
+    { status: 201, headers },
+  );
 });
