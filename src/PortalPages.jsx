@@ -112,7 +112,7 @@ function HomeLink({ label }) {
 }
 
 function PortalFrame({ children, audience = "customer" }) {
-  const { user, supabase } = useAuth();
+  const { supabase } = useAuth();
   const [signOutError, setSignOutError] = useState("");
   const [signingOut, setSigningOut] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -147,28 +147,6 @@ function PortalFrame({ children, audience = "customer" }) {
       <header className="portal-topbar">
         <PortalBrand />
         <div className="portal-topbar-right">
-          <span className="portal-account-label">{isRestaurant ? "Restaurant workspace" : audience === "admin" ? "Administrator" : "Customer account"}</span>
-          <span className="portal-user-email">{user?.email}</span>
-          <ThemeToggle />
-          <button
-            className="portal-signout"
-            type="button"
-            disabled={signingOut}
-            onClick={async () => {
-              setSigningOut(true);
-              setSignOutError("");
-              try {
-                const { error } = await supabase.auth.signOut();
-                if (error) setSignOutError(error.message);
-              } catch (error) {
-                setSignOutError(error.message || "Couldn’t sign out.");
-              } finally {
-                setSigningOut(false);
-              }
-            }}
-          >
-            {signingOut ? <LoadingIndicator label="Signing out" /> : "Sign out"}
-          </button>
           <HomeLink label="Visit homepage" />
           <button
             className="portal-sidebar-toggle"
@@ -194,14 +172,9 @@ function PortalFrame({ children, audience = "customer" }) {
         <aside
           className={`portal-sidebar${mobileSidebarOpen ? " is-open" : ""}`}
           id="dashboard-sidebar"
-          aria-label={`${audience} workspace navigation`}
+          aria-label="Dashboard navigation"
         >
           <div className="portal-sidebar-heading">
-            <span className="portal-avatar">{isRestaurant ? "R" : "Q"}</span>
-            <div>
-              <strong>{isRestaurant ? "Restaurant workspace" : audience === "admin" ? "QuickCrave admin" : "Customer workspace"}</strong>
-              <span>{isRestaurant ? "Manage your business" : audience === "admin" ? "Manage the marketplace" : "Find your next favorite"}</span>
-            </div>
             <button
               className="portal-sidebar-close"
               type="button"
@@ -211,8 +184,8 @@ function PortalFrame({ children, audience = "customer" }) {
               ×
             </button>
           </div>
-          <nav aria-label={`${audience} dashboard`}>
-            <span className="portal-nav-caption">WORKSPACE</span>
+          <nav aria-label="Dashboard menu">
+            <span className="portal-nav-caption">MENU</span>
             {links.map(([to, label]) => (
               <NavLink
                 end={to.endsWith("/dashboard")}
@@ -226,6 +199,28 @@ function PortalFrame({ children, audience = "customer" }) {
               </NavLink>
             ))}
           </nav>
+          <div className="portal-sidebar-actions" role="group" aria-label="Account actions">
+            <ThemeToggle />
+            <button
+              className="portal-signout"
+              type="button"
+              disabled={signingOut}
+              onClick={async () => {
+                setSigningOut(true);
+                setSignOutError("");
+                try {
+                  const { error } = await supabase.auth.signOut();
+                  if (error) setSignOutError(error.message);
+                } catch (error) {
+                  setSignOutError(error.message || "Couldn’t sign out.");
+                } finally {
+                  setSigningOut(false);
+                }
+              }}
+            >
+              {signingOut ? <LoadingIndicator label="Signing out" /> : "Sign out"}
+            </button>
+          </div>
           <div className="portal-sidebar-footer">
             <span className="portal-footer-mark" aria-hidden="true">✦</span>
             <p>Good food starts close to home.</p>
