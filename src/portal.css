@@ -922,6 +922,81 @@
   background: #fffdf9;
 }
 
+.portal-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
+  gap: 15px;
+  margin-top: 16px;
+}
+
+.portal-menu-card {
+  height: 100%;
+}
+
+.portal-menu-card .dish-image {
+  aspect-ratio: 1.22;
+}
+
+.portal-menu-card .dish-image-placeholder {
+  min-height: 0;
+}
+
+.portal-menu-card .dish-details {
+  display: flex;
+  min-height: 205px;
+  flex-direction: column;
+}
+
+.portal-menu-card .dish-restaurant {
+  margin: 7px 0 8px;
+}
+
+.portal-menu-card .dish-description {
+  display: -webkit-box;
+  min-height: 2.8em;
+  overflow: hidden;
+  margin: 0 0 12px;
+  color: #81776d;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.portal-menu-card .dish-meta {
+  margin-top: auto;
+}
+
+.portal-dish-actions {
+  margin-top: 12px;
+}
+
+.portal-dish-actions .dish-add-button {
+  margin-top: 0;
+}
+
+.portal-dish-actions .dish-add-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.portal-dish-actions .order-item-control {
+  width: 100%;
+  justify-content: center;
+}
+
+.portal-dish-actions .menu-item-actions {
+  display: flex;
+  width: 100%;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.portal-dish-actions .menu-item-actions button {
+  min-height: 36px;
+  flex: 1 1 auto;
+}
+
 .restaurant-feed-art {
   display: grid;
   width: 46px;
@@ -1212,10 +1287,63 @@
   color: #3d7541;
 }
 
+.status-pill.status-approved {
+  border-color: #dcebd8;
+  background: #e8f2e5;
+  color: #507a48;
+}
+
 .status-pill.status-rejected,
 .status-pill.status-cancelled {
   background: #fbe8e4;
   color: #9d4537;
+}
+
+.order-progress {
+  display: grid;
+  gap: 5px;
+  margin: 15px 0 20px;
+  padding: 0 0 0 21px;
+  list-style: none;
+}
+
+.order-progress li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: #776d64;
+}
+
+.order-progress li > span {
+  display: inline;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.order-progress li small {
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.order-progress li.is-complete,
+.order-progress li.is-current {
+  color: #443a32;
+}
+
+.order-progress li.is-current small {
+  color: #443a32;
+  font-weight: 750;
+}
+
+.order-terminal-status {
+  margin: 17px 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f8efeb;
+  color: #8d5144;
+  font-size: 0.8rem;
+  line-height: 1.5;
 }
 
 .restaurant-feed-card .feed-order-note {
@@ -3367,6 +3495,12 @@
   line-height: 1.5;
 }
 
+@media (max-width: 520px) {
+  .order-progress {
+    padding-left: 18px;
+  }
+}
+
 .restaurant-command-center {
   padding: 7px 23px;
 }
@@ -3807,6 +3941,72 @@
   border-color: #3b523c;
   background: #202b21;
   color: #abd0a7;
+}
+
+.portal-page .status-pill.status-approved,
+.portal-page .status-pill.status-completed {
+  border-color: #3b523c;
+  background: #202b21;
+  color: #abd0a7;
+}
+
+.dashboard-section-heading h2,
+.restaurant-order-card .card-title-row h3 {
+  color: #eff1eb;
+}
+
+.restaurant-order-card .card-title-row p,
+.portal-menu-card .dish-description {
+  color: #a3aaa1;
+}
+
+.order-progress li,
+.order-progress li.is-complete,
+.order-progress li.is-current,
+.order-progress li.is-current small {
+  color: #d4d9d2;
+}
+
+.order-progress li > span {
+  position: static;
+  display: inline;
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.order-progress {
+  grid-template-columns: 1fr;
+  gap: 5px;
+  margin: 15px 0 20px;
+  padding: 0 0 0 21px;
+}
+
+.order-progress li {
+  position: static;
+  display: flex;
+  justify-items: initial;
+  align-items: baseline;
+  gap: 6px;
+  text-align: left;
+}
+
+.order-progress li::before {
+  display: none;
+}
+
+.order-progress li small {
+  max-width: none;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.order-terminal-status {
+  background: #2b211e;
+  color: #d4d9d2;
 }
 
 .status-pill.status-rejected,

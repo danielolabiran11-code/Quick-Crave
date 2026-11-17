@@ -706,6 +706,30 @@ function DashboardHeader({ eyebrow, title, description, action }) {
   );
 }
 
+function PortalDishCard({ item, restaurantName, children }) {
+  return (
+    <article className="dish-card portal-menu-card">
+      <div className="dish-image">
+        {item.image_url
+          ? <img src={item.image_url} alt={item.name} loading="lazy" />
+          : <span className="dish-image-placeholder" aria-hidden="true">✦</span>}
+      </div>
+      <div className="dish-details">
+        <div className="dish-title-row">
+          <h3>{item.name}</h3>
+        </div>
+        <p className="dish-restaurant">{restaurantName} <span aria-hidden="true">·</span> {item.category}</p>
+        {item.description && <p className="dish-description">{item.description}</p>}
+        <div className="dish-meta">
+          <span>{item.is_available === false ? "Currently unavailable" : "Available to order"}</span>
+          <strong className="dish-price">{priceFormatter.format(Number(item.price))}</strong>
+        </div>
+        <div className="portal-dish-actions">{children}</div>
+      </div>
+    </article>
+  );
+}
+
 function CustomerDashboard({ section = "discover" }) {
   const { supabase, user } = useAuth();
   const [restaurants, setRestaurants] = useState([]);
@@ -1117,36 +1141,30 @@ function CustomerDashboard({ section = "discover" }) {
                       <h3>{restaurant.name}</h3>
                       <p>{restaurant.location || "Neighborhood restaurant"}</p>
                       <small>{restaurant.opening_hours || "Hours available from restaurant"}</small>
-                      <ul className="restaurant-menu-preview">
+                      <div className="portal-menu-grid customer-portal-menu-grid">
                         {menuOffers
                           .filter((item) => item.restaurants.id === restaurant.id)
                           .map((item) => (
-                            <li key={item.id}>
-                              {item.image_url
-                                ? <img className="meal-thumbnail" src={item.image_url} alt={item.name} loading="lazy" />
-                                : <span className="meal-thumbnail meal-thumbnail-placeholder" aria-hidden="true">✦</span>}
-                              <span className="restaurant-menu-item-details"><strong>{item.name}</strong><small>{item.description || item.category}</small></span>
-                              <strong>{priceFormatter.format(Number(item.price))}</strong>
-                              <span className="order-item-control">
-                                {orderCart.some((selected) => selected.id === item.id) ? (
-                                  <>
-                                    <button type="button" aria-label={`Remove one ${item.name}`} onClick={() => changeOrderQuantity(item.id, -1)}>−</button>
-                                    <span>{orderCart.find((selected) => selected.id === item.id)?.quantity}</span>
-                                    <button type="button" aria-label={`Add one ${item.name}`} disabled={orderCart.find((selected) => selected.id === item.id)?.quantity >= 20} onClick={() => addToOrder(item, restaurant.id)}>+</button>
-                                  </>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    disabled={Boolean(cartRestaurantId && cartRestaurantId !== restaurant.id)}
-                                    onClick={() => addToOrder(item, restaurant.id)}
-                                  >
-                                    Add
-                                  </button>
-                                )}
-                              </span>
-                            </li>
+                            <PortalDishCard item={item} restaurantName={restaurant.name} key={item.id}>
+                              {orderCart.some((selected) => selected.id === item.id) ? (
+                                <span className="order-item-control">
+                                  <button type="button" aria-label={`Remove one ${item.name}`} onClick={() => changeOrderQuantity(item.id, -1)}>−</button>
+                                  <span>{orderCart.find((selected) => selected.id === item.id)?.quantity}</span>
+                                  <button type="button" aria-label={`Add one ${item.name}`} disabled={orderCart.find((selected) => selected.id === item.id)?.quantity >= 20} onClick={() => addToOrder(item, restaurant.id)}>+</button>
+                                </span>
+                              ) : (
+                                <button
+                                  className="dish-add-button"
+                                  type="button"
+                                  disabled={Boolean(cartRestaurantId && cartRestaurantId !== restaurant.id)}
+                                  onClick={() => addToOrder(item, restaurant.id)}
+                                >
+                                  Add to request <span aria-hidden="true">+</span>
+                                </button>
+                              )}
+                            </PortalDishCard>
                           ))}
-                      </ul>
+                      </div>
                       {menuOffers.some((item) => item.restaurants.id === restaurant.id) && (
                         <p className="feed-order-note">Prices and availability are confirmed by the restaurant after you send a request.</p>
                       )}
@@ -1983,11 +2001,9 @@ function RestaurantDashboard({ section = "overview" }) {
             ) : menuItems.length === 0 ? (
               <EmptyState icon="☷" title="Your menu is waiting" text="Add a dish above to get started." />
             ) : (
-              <ul className="editable-menu-list">
+              <div className="portal-menu-grid restaurant-portal-menu-grid">
                 {menuItems.map((item) => (
-                  <li key={item.id}>
-                    <span>{item.image_url && <img className="menu-item-thumbnail" src={item.image_url} alt="" />}<strong>{item.name}</strong><small>{item.category}{item.description ? ` · ${item.description}` : ""}</small></span>
-                    <strong>{priceFormatter.format(Number(item.price))}</strong>
+                  <PortalDishCard item={item} restaurantName={restaurant?.name || "Your restaurant"} key={item.id}>
                     <span className="menu-item-actions">
                       <button type="button" disabled={restaurantRole !== "owner" || Boolean(menuActionId)} onClick={() => updateMenuAvailability(item)}>
                         {menuActionId === item.id ? <LoadingIndicator label="Updating availability" /> : item.is_available ? "Available" : "Unavailable"}
@@ -1997,9 +2013,9 @@ function RestaurantDashboard({ section = "overview" }) {
                         {menuActionId === item.id ? <LoadingIndicator label="Removing item" /> : "Remove"}
                       </button>
                     </span>
-                  </li>
+                  </PortalDishCard>
                 ))}
-              </ul>
+              </div>
             )}
           </section>
         </>
